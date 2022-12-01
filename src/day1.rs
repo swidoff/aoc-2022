@@ -31,7 +31,7 @@ fn max_elf_calories(input: impl Iterator<Item = String>) -> u64 {
 /// Rather than sorting the elf calories, uses a min-heap of 3 elements for an O(nlog3) operation (rather than O(nlogn))
 ///
 fn top_n_elf_calories(input: impl Iterator<Item = String>, n: usize) -> u64 {
-    let mut min_heap = BinaryHeap::with_capacity(3);
+    let mut min_heap = BinaryHeap::with_capacity(n);
     for (i, calories) in elf_calories(input).enumerate() {
         match min_heap.peek() {
             Some(Reverse((smallest_max, _i))) => {
