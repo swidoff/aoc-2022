@@ -1,4 +1,6 @@
 use itertools::Itertools;
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter;
@@ -26,13 +28,29 @@ fn max_elf_calories(input: impl Iterator<Item = String>) -> u64 {
     elf_calories(input).max().unwrap()
 }
 
-fn top_3_elf_calories(input: impl Iterator<Item = String>) -> u64 {
-    elf_calories(input).sorted().rev().take(3).sum()
+/// Rather than sorting the elf calories, uses a min-heap of 3 elements for an O(nlog3) operation (rather than O(nlogn))
+///
+fn top_n_elf_calories(input: impl Iterator<Item = String>, n: usize) -> u64 {
+    let mut min_heap = BinaryHeap::with_capacity(3);
+    for (i, calories) in elf_calories(input).enumerate() {
+        match min_heap.peek() {
+            Some(Reverse((smallest_max, _i))) => {
+                if calories > *smallest_max {
+                    if min_heap.len() == n {
+                        min_heap.pop();
+                    }
+                    min_heap.push(Reverse((calories, i)));
+                }
+            }
+            _ => min_heap.push(Reverse((calories, i))),
+        }
+    }
+    min_heap.iter().map(|&Reverse((v, _i))| v).sum()
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::day1::{max_elf_calories, read_file, top_3_elf_calories};
+    use crate::day1::{max_elf_calories, read_file, top_n_elf_calories};
 
     const EXAMPLE: &str = "1000
 2000
@@ -67,13 +85,13 @@ mod tests {
     #[test]
     fn part2_example() {
         let input = EXAMPLE.lines().map(|s| s.to_string());
-        assert_eq!(top_3_elf_calories(input), 45000);
+        assert_eq!(top_n_elf_calories(input, 3), 45000);
     }
 
     #[test]
     fn part2() {
         let input = read_file();
-        let res = top_3_elf_calories(input);
+        let res = top_n_elf_calories(input, 3);
         println!("{}", res);
         assert_eq!(res, 212520);
     }
