@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -13,11 +12,13 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
         .map(|rucksack| {
             let len = rucksack.len();
             let (compartment1, compartment2) = rucksack.split_at(len / 2);
-            score(encode(compartment1) & encode(compartment2))
+            sum(bitset(compartment1) & bitset(compartment2))
         })
         .sum()
 }
 
+/// Find the 0-56 index of a char.
+///
 fn index(char: char) -> u64 {
     if char.is_ascii_uppercase() {
         u64::from(char) - u64::from('A') + 26
@@ -26,7 +27,9 @@ fn index(char: char) -> u64 {
     }
 }
 
-fn encode(str: &str) -> u64 {
+/// Set a bit for each char in the string. They are encoded 0-56.
+///
+fn bitset(str: &str) -> u64 {
     let mut bitset = 0;
     for c in str.chars() {
         bitset |= 1 << index(c);
@@ -34,7 +37,9 @@ fn encode(str: &str) -> u64 {
     bitset
 }
 
-fn score(bitset: u64) -> u64 {
+/// Sum the bits in the bit set.
+///
+fn sum(bitset: u64) -> u64 {
     let mut score = 0;
     let mut bitset = bitset;
     while bitset > 0 {
@@ -47,7 +52,7 @@ fn score(bitset: u64) -> u64 {
 fn part2(input: impl Iterator<Item = String>) -> u64 {
     input
         .tuples()
-        .map(|(bag1, bag2, bag3)| score(encode(&bag1[..]) & encode(&bag2[..]) & encode(&bag3[..])))
+        .map(|(bag1, bag2, bag3)| sum(bitset(&bag1[..]) & bitset(&bag2[..]) & bitset(&bag3[..])))
         .sum()
 }
 
