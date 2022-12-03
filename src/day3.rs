@@ -8,42 +8,46 @@ fn read_file() -> impl Iterator<Item = String> {
     BufReader::new(file).lines().map(|s| s.unwrap())
 }
 
-fn part1(input: impl Iterator<Item = String>) -> u32 {
+fn part1(input: impl Iterator<Item = String>) -> u64 {
     input
         .map(|rucksack| {
             let len = rucksack.len();
             let (compartment1, compartment2) = rucksack.split_at(len / 2);
-            let compartment1: HashSet<char> = HashSet::from_iter(compartment1.chars());
-            let compartment2 = HashSet::from_iter(compartment2.chars());
-            let mut intersection = compartment1.intersection(&compartment2);
-            let &char = intersection.next().unwrap();
-            priority(char)
+            score(encode(compartment1) & encode(compartment2))
         })
         .sum()
 }
 
-fn priority(char: char) -> u32 {
+fn index(char: char) -> u64 {
     if char.is_ascii_uppercase() {
-        u32::from(char) - u32::from('A') + 27
+        u64::from(char) - u64::from('A') + 26
     } else {
-        u32::from(char) - u32::from('a') + 1
+        u64::from(char) - u64::from('a')
     }
 }
 
-fn part2(input: impl Iterator<Item = String>) -> u32 {
+fn encode(str: &str) -> u64 {
+    let mut bitset = 0;
+    for c in str.chars() {
+        bitset |= 1 << index(c);
+    }
+    bitset
+}
+
+fn score(bitset: u64) -> u64 {
+    let mut score = 0;
+    let mut bitset = bitset;
+    while bitset > 0 {
+        bitset >>= 1;
+        score += 1;
+    }
+    score
+}
+
+fn part2(input: impl Iterator<Item = String>) -> u64 {
     input
         .tuples()
-        .map(|(bag1, bag2, bag3)| {
-            let bag1: HashSet<char> = HashSet::from_iter(bag1.chars());
-            let bag2: HashSet<char> = HashSet::from_iter(bag2.chars());
-            let bag3: HashSet<char> = HashSet::from_iter(bag3.chars());
-            for i in bag1.iter() {
-                if bag2.contains(i) && bag3.contains(&i) {
-                    return priority(*i);
-                }
-            }
-            0
-        })
+        .map(|(bag1, bag2, bag3)| score(encode(&bag1[..]) & encode(&bag2[..]) & encode(&bag3[..])))
         .sum()
 }
 
