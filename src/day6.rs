@@ -27,11 +27,25 @@ fn part1(input: String) -> usize {
 fn part2(input: String) -> usize {
     // Safe because all chars are bytes here.
     for i in 14..input.len() + 1 {
-        if input[i - 14..i].chars().all_unique() {
+        // Equivalent to `input[i - 14..i].chars().all_unique` but doesn't need a HashSet.
+        if all_unique(input[i - 14..i].chars()) {
             return i;
         }
     }
     return 0;
+}
+
+fn all_unique(iter: impl Iterator<Item = char>) -> bool {
+    let mut bitset: u64 = 0;
+    for c in iter {
+        let bit = 1 << (u32::from(c) - u32::from('a'));
+        bitset ^= bit;
+        if bitset & bit == 0 {
+            // We XORed the bit for the letter `c` back to zero. It's not unique.
+            return false;
+        }
+    }
+    true
 }
 
 #[cfg(test)]
