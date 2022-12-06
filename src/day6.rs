@@ -27,7 +27,7 @@ fn part1(input: String) -> usize {
 fn part2(input: String) -> usize {
     // Safe because all chars are bytes here.
     for i in 14..input.len() + 1 {
-        // Equivalent to `input[i - 14..i].chars().all_unique` but doesn't need a HashSet.
+        // Equivalent to `input[i - 14..i].chars().all_unique()` but doesn't need a HashSet.
         if all_unique(input[i - 14..i].chars()) {
             return i;
         }
