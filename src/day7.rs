@@ -20,8 +20,11 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, usize> {
                 stack.pop_back().unwrap();
             }
             ["$", "cd", dir] => {
-                let mut path = stack.iter().join("/");
-                path.extend(dir.chars());
+                let path = if stack.is_empty() {
+                    dir.to_string()
+                } else {
+                    format!("{}/{}", stack.back().unwrap(), dir)
+                };
                 stack.push_back(path.clone());
                 dirs.insert(path, 0);
             }
