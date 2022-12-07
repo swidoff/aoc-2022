@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use std::cell::RefCell;
+use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::rc::Rc;
@@ -10,94 +11,50 @@ fn read_file() -> impl Iterator<Item = String> {
     BufReader::new(file).lines().map(|s| s.unwrap())
 }
 
-struct Directory {
-    files: Vec<Fyle>,
-    dirs: Vec<Rc<RefCell<Directory>>>,
-    parent: Option<Rc<RefCell<Directory>>>,
-}
+fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, usize> {
+    let mut stack = VecDeque::new();
+    let mut dirs = HashMap::new();
 
-impl Directory {
-    fn flatten(&self) -> Vec<Rc<RefCell<Directory>>> {
-        let mut res = Vec::new();
-        for dir in self.dirs.iter() {
-            res.push(dir.clone());
-            res.extend(dir.borrow().flatten());
-        }
-        res
-    }
-
-    fn total_size(&self) -> usize {
-        let file_sizes: usize = self.files.iter().map(|f| f.size).sum();
-        let dir_sizes: usize = self.dirs.iter().map(|d| d.borrow().total_size()).sum();
-        file_sizes + dir_sizes
-    }
-}
-
-struct Fyle {
-    size: usize,
-}
-
-fn parse_input(input: impl Iterator<Item = String>) -> Rc<RefCell<Directory>> {
-    let root = Rc::new(RefCell::new(Directory {
-        files: Vec::new(),
-        dirs: Vec::new(),
-        parent: None,
-    }));
-    let mut cwd = root.clone();
-
-    for line in input.skip(1) {
+    for line in input {
         let v = line.split(" ").collect_vec();
         match v.as_slice() {
             ["$", "cd", ".."] => {
-                let parent = cwd.borrow().parent.as_ref().unwrap().clone();
-                cwd = parent;
+                stack.pop_back().unwrap();
             }
-            ["$", "cd", _dir] => {
-                let new_dir = Rc::new(RefCell::new(Directory {
-                    files: Vec::new(),
-                    dirs: Vec::new(),
-                    parent: Some(cwd.clone()),
-                }));
-                cwd.borrow_mut().dirs.push(new_dir.clone());
-                cwd = new_dir;
+            ["$", "cd", dir] => {
+                let mut path = stack.iter().join("/");
+                path.extend(dir.chars());
+                stack.push_back(path.clone());
+                dirs.insert(path, 0);
             }
             ["$", "ls"] => {}
             ["dir", _dir_name] => {}
             [num, _name] => {
-                let fyle = Fyle {
-                    size: usize::from_str(*num).unwrap(),
-                };
-                cwd.borrow_mut().files.push(fyle);
+                let size = usize::from_str(*num).unwrap();
+                for dir in stack.iter() {
+                    *dirs.get_mut(dir).unwrap() += size;
+                }
             }
             _ => {}
         }
     }
-    root
+    dirs
 }
 
 fn part1(input: impl Iterator<Item = String>) -> usize {
-    let root_dir = parse_input(input);
-    let root_dir = root_dir.borrow();
-    root_dir
-        .flatten()
-        .iter()
-        .map(|d| d.borrow().total_size())
-        .filter(|&size| size <= 100000)
-        .sum()
+    let dirs = parse_input(input);
+    dirs.values().filter(|&&size| size <= 100000).sum()
 }
 
 fn part2(input: impl Iterator<Item = String>) -> usize {
-    let root_dir = parse_input(input);
-    let root_dir = root_dir.borrow();
-    let used_space = root_dir.total_size();
+    let dirs = parse_input(input);
+    let used_space = dirs.get(&"/".to_string()).unwrap();
     let free_space = 70_000_000 - used_space;
     let needed_space = 30_000_000 - free_space;
 
-    root_dir
-        .flatten()
-        .iter()
-        .map(|d| d.borrow().total_size())
-        .filter(|&size| size >= needed_space)
+    *dirs
+        .values()
+        .filter(|&&size| size >= needed_space)
         .min()
         .unwrap()
 }
