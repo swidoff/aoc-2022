@@ -1,9 +1,7 @@
 use itertools::Itertools;
-use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::rc::Rc;
 use std::str::FromStr;
 
 fn read_file() -> impl Iterator<Item = String> {
@@ -42,17 +40,17 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, usize> {
 }
 
 fn part1(input: impl Iterator<Item = String>) -> usize {
-    let dirs = parse_input(input);
-    dirs.values().filter(|&&size| size <= 100000).sum()
+    let dir_sizes = parse_input(input);
+    dir_sizes.values().filter(|&&size| size <= 100000).sum()
 }
 
 fn part2(input: impl Iterator<Item = String>) -> usize {
-    let dirs = parse_input(input);
-    let used_space = dirs.get(&"/".to_string()).unwrap();
+    let dir_sizes = parse_input(input);
+    let used_space = dir_sizes.get(&"/".to_string()).unwrap();
     let free_space = 70_000_000 - used_space;
     let needed_space = 30_000_000 - free_space;
 
-    *dirs
+    *dir_sizes
         .values()
         .filter(|&&size| size >= needed_space)
         .min()
