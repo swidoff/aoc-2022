@@ -9,7 +9,7 @@ fn read_file() -> impl Iterator<Item = String> {
     BufReader::new(file).lines().map(|s| s.unwrap())
 }
 
-fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, usize> {
+fn parse_dir_sizes(input: impl Iterator<Item = String>) -> HashMap<String, usize> {
     let mut stack = VecDeque::new();
     let mut dirs = HashMap::new();
 
@@ -43,12 +43,12 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, usize> {
 }
 
 fn part1(input: impl Iterator<Item = String>) -> usize {
-    let dir_sizes = parse_input(input);
+    let dir_sizes = parse_dir_sizes(input);
     dir_sizes.values().filter(|&&size| size <= 100000).sum()
 }
 
 fn part2(input: impl Iterator<Item = String>) -> usize {
-    let dir_sizes = parse_input(input);
+    let dir_sizes = parse_dir_sizes(input);
     let used_space = dir_sizes.get(&"/".to_string()).unwrap();
     let free_space = 70_000_000 - used_space;
     let needed_space = 30_000_000 - free_space;
