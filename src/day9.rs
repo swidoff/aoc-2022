@@ -60,25 +60,11 @@ fn move_head(head: &(i32, i32), dir: Dir) -> (i32, i32) {
 fn move_tail(head: &(i32, i32), tail: &(i32, i32)) -> (i32, i32) {
     let r_diff = head.0 - tail.0;
     let c_diff = head.1 - tail.1;
-    let r_dist = r_diff.abs();
-    let c_dist = c_diff.abs();
 
-    if !(r_dist > 1 || c_dist > 1) {
-        *tail
+    if r_diff.abs() > 1 || c_diff.abs() > 1 {
+        (tail.0 + r_diff.signum(), tail.1 + c_diff.signum())
     } else {
-        let tail_r = if r_dist > 0 {
-            tail.0 + r_diff.signum()
-        } else {
-            tail.0
-        };
-
-        let tail_c = if c_dist > 0 {
-            tail.1 + c_diff.signum()
-        } else {
-            tail.1
-        };
-
-        (tail_r, tail_c)
+        *tail
     }
 }
 
