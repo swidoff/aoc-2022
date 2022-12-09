@@ -47,6 +47,7 @@ fn part1(input: impl Iterator<Item = String>) -> usize {
 
     visited.len()
 }
+
 fn move_head(head: &(i32, i32), dir: Dir) -> (i32, i32) {
     match dir {
         Dir::Left => (head.0, head.1 - 1),
