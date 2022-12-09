@@ -90,7 +90,7 @@ fn move_tail(head: &(i32, i32), tail: &(i32, i32)) -> (i32, i32) {
 
 fn part2(input: impl Iterator<Item = String>) -> usize {
     let mut visited = HashSet::new();
-    let mut knots = iter::repeat((0, 0)).take(9).collect_vec();
+    let mut knots = iter::repeat((0, 0)).take(10).collect_vec();
 
     for dir in parse_input(input) {
         knots[0] = move_head(&knots[0], dir);
@@ -147,6 +147,6 @@ U 20
     fn test_part2() {
         let res = part2(read_file());
         println!("{}", res);
-        // assert_eq!(res, 0);
+        assert_eq!(res, 2460);
     }
 }
