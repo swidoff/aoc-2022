@@ -57,34 +57,27 @@ fn move_head(head: &(i32, i32), dir: Dir) -> (i32, i32) {
 }
 
 fn move_tail(head: &(i32, i32), tail: &(i32, i32)) -> (i32, i32) {
-    if !((head.0 - tail.0).abs() > 1 || (head.1 - tail.1).abs() > 1) {
+    let r_diff = head.0 - tail.0;
+    let c_diff = head.1 - tail.1;
+    let r_dist = r_diff.abs();
+    let c_dist = c_diff.abs();
+
+    if !(r_dist > 1 || c_dist > 1) {
         *tail
-    } else if tail.0 == head.0 && tail.1 < head.1 {
-        // Two left
-        (tail.0, tail.1 + 1)
-    } else if tail.0 == head.0 && tail.1 > head.1 {
-        // Two right
-        (tail.0, tail.1 - 1)
-    } else if tail.0 < head.0 && tail.1 == head.1 {
-        // Two Up
-        (tail.0 + 1, tail.1)
-    } else if tail.0 > head.0 && tail.1 == head.1 {
-        // Two Down
-        (tail.0 - 1, tail.1)
-    } else if tail.0 < head.0 && tail.1 < head.1 {
-        // Upper left
-        (tail.0 + 1, tail.1 + 1)
-    } else if tail.0 < head.0 && tail.1 > head.1 {
-        // Upper right
-        (tail.0 + 1, tail.1 - 1)
-    } else if tail.0 > head.0 && tail.1 > head.1 {
-        // Lower right
-        (tail.0 - 1, tail.1 - 1)
-    } else if tail.0 > head.0 && tail.1 < head.1 {
-        // Lower left
-        (tail.0 - 1, tail.1 + 1)
     } else {
-        *tail
+        let tail_r = if r_dist > 0 {
+            tail.0 + r_diff.signum()
+        } else {
+            tail.0
+        };
+
+        let tail_c = if c_dist > 0 {
+            tail.1 + c_diff.signum()
+        } else {
+            tail.1
+        };
+
+        (tail_r, tail_c)
     }
 }
 
