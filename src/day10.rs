@@ -44,8 +44,8 @@ fn part2(input: impl Iterator<Item = String>) -> String {
     let mut x: i32 = 1;
     let mut display = ['.'; 240];
     for line in input {
-        let signed_pos = (pos % 40) as i32;
-        if signed_pos >= x - 1 && signed_pos <= x + 1 {
+        let hor_pos = (pos % 40) as i32;
+        if hor_pos >= x - 1 && hor_pos <= x + 1 {
             display[pos] = '#';
         }
         pos += 1;
@@ -54,8 +54,8 @@ fn part2(input: impl Iterator<Item = String>) -> String {
         match words.as_slice() {
             ["noop"] => {}
             ["addx", val_str] => {
-                let signed_pos = (pos % 40) as i32;
-                if signed_pos >= x - 1 && signed_pos <= x + 1 {
+                let hor_pos = (pos % 40) as i32;
+                if hor_pos >= x - 1 && hor_pos <= x + 1 {
                     display[pos] = '#';
                 }
                 pos += 1;
