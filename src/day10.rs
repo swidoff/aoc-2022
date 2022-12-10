@@ -4,8 +4,7 @@ use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 
 fn read_file() -> impl Iterator<Item = String> {
-    let file = File::open("input/day10.txt").unwrap();
-    BufReader::new(file).lines().map(|s| s.unwrap())
+    read_named_file("day10.txt")
 }
 
 fn read_named_file(name: &str) -> impl Iterator<Item = String> {
