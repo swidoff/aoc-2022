@@ -39,8 +39,7 @@ fn parse_input(iter: impl Iterator<Item = String>) -> (Vec<Vec<i32>>, Coord, Coo
 #[derive(Clone, Eq, PartialEq)]
 struct State {
     steps: i32,
-    coord: Coord, // distance: i32,
-                  // path: Vec<Coord>,
+    coord: Coord,
 }
 
 impl Ord for State {
