@@ -54,11 +54,6 @@ impl PartialOrd for State {
     }
 }
 
-fn part1(input: impl Iterator<Item = String>) -> i32 {
-    let (grid, start_coord, end_coord) = parse_input(input);
-    shortest_path(grid, vec![start_coord], end_coord)
-}
-
 fn shortest_path(grid: Vec<Vec<i32>>, start_coords: Vec<Coord>, end_coord: Coord) -> i32 {
     let n_rows = grid.len() as i32;
     let n_cols = grid[0].len() as i32;
@@ -95,18 +90,21 @@ fn shortest_path(grid: Vec<Vec<i32>>, start_coords: Vec<Coord>, end_coord: Coord
             let new_row = row + dr;
             let new_col = col + dc;
             if new_row >= 0 && new_row < n_rows && new_col >= 0 && new_col < n_cols {
-                let next_c = grid[new_row as usize][new_col as usize];
-                if next_c <= c + 1 {
-                    let new_coord = (new_row, new_col);
+                if grid[new_row as usize][new_col as usize] <= c + 1 {
                     q.push(State {
                         steps: steps + 1,
-                        coord: new_coord,
+                        coord: (new_row, new_col),
                     });
                 }
             }
         }
     }
     0
+}
+
+fn part1(input: impl Iterator<Item = String>) -> i32 {
+    let (grid, start_coord, end_coord) = parse_input(input);
+    shortest_path(grid, vec![start_coord], end_coord)
 }
 
 fn part2(input: impl Iterator<Item = String>) -> i32 {
