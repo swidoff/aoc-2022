@@ -113,7 +113,7 @@ fn part2(input: impl Iterator<Item = String>) -> i32 {
     for r in 0..grid.len() {
         let row = &grid[r];
         for c in 0..row.len() {
-            if grid[r][c] == 0 {
+            if row[c] == 0 {
                 start_coords.push((r as i32, c as i32));
             }
         }
