@@ -122,68 +122,39 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
     inspections[inspections.len() - 2] * inspections[inspections.len() - 1]
 }
 
-struct Item {
-    prime_remainders: Vec<u64>,
-}
-
 const PRIMES: [u64; 9] = [2, 3, 5, 7, 11, 13, 17, 19, 23];
 
-impl Item {
-    fn new(num: u64) -> Item {
-        let mut prime_remainders = Vec::with_capacity(PRIMES.len());
-        for prime in PRIMES {
-            prime_remainders.push(num % prime)
-        }
-        Item { prime_remainders }
-    }
-
-    fn times(&mut self, other: u64) {
-        for (i, rem) in self.prime_remainders.iter_mut().enumerate() {
-            *rem = (*rem * other) % PRIMES[i];
-        }
-    }
-
-    fn add(&mut self, other: u64) {
-        for (i, rem) in self.prime_remainders.iter_mut().enumerate() {
-            *rem = (*rem + other) % PRIMES[i];
-        }
-    }
-
-    fn square(&mut self) {
-        for (i, rem) in self.prime_remainders.iter_mut().enumerate() {
-            *rem = (*rem * *rem) % PRIMES[i];
-        }
-    }
-
-    fn is_divisible(&self, denom: u64) -> bool {
-        for (i, &prime) in PRIMES.iter().enumerate() {
-            if prime == denom {
-                return self.prime_remainders[i] == 0;
-            }
-        }
-        return false;
-    }
-}
-
 fn part2(input: impl Iterator<Item = String>) -> u64 {
-    let mut monkeys = parse_input(input, |v| Item::new(v));
+    let mut monkeys = parse_input(input, |v| {
+        let mut item = [0; 9];
+        for (i, prime) in PRIMES.iter().enumerate() {
+            item[i] = v % prime;
+        }
+        item
+    });
     let mut inspections = iter::repeat(0).take(monkeys.len()).collect_vec();
     for _round in 0..10000 {
         for i in 0..monkeys.len() {
             while let Some(mut item) = monkeys[i].items.pop_front() {
                 inspections[i] += 1;
 
-                match monkeys[i].op {
-                    Operation::Times(v) => item.times(v),
-                    Operation::Plus(v) => item.add(v),
-                    Operation::Square() => item.square(),
-                };
+                for j in 0..PRIMES.len() {
+                    item[j] = match monkeys[i].op {
+                        Operation::Times(v) => item[j] * v,
+                        Operation::Plus(v) => item[j] + v,
+                        Operation::Square() => item[j] * item[j],
+                    } % PRIMES[j];
+                }
 
-                let target = if item.is_divisible(monkeys[i].test_denom) {
-                    monkeys[i].true_monkey
-                } else {
-                    monkeys[i].false_monkey
-                };
+                let mut target = monkeys[i].false_monkey;
+                for j in 0..PRIMES.len() {
+                    if PRIMES[j] == monkeys[i].test_denom {
+                        if item[j] == 0 {
+                            target = monkeys[i].true_monkey;
+                        }
+                        break;
+                    }
+                }
                 monkeys[target].items.push_back(item);
             }
         }
