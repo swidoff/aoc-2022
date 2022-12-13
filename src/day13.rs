@@ -103,7 +103,6 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
     packets.push(d1.clone());
     packets.push(d2.clone());
     packets.sort_by(|p1, p2| compare(p1, p2));
-    println!("{:?}", packets);
 
     let mut res = 1;
     for (i, p) in packets.iter().enumerate() {
