@@ -63,14 +63,14 @@ impl From<String> for Packet {
                 ',' => {}
                 v => {
                     let mut d = v.to_digit(10).unwrap();
-                    match iter.peek() {
-                        Some(&v2) if v2.is_digit(10) => {
-                            d = d * 10 + v2.to_digit(10).unwrap();
+                    while let Some(c) = iter.peek() {
+                        if let Some(d2) = c.to_digit(10) {
+                            d = d * 10 + d2;
                             iter.next();
+                        } else {
+                            break;
                         }
-                        _ => {}
                     }
-
                     if let Some(Packet::List(ls)) = stack.back_mut() {
                         ls.push(Packet::Scalar(d))
                     }
