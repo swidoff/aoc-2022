@@ -9,10 +9,76 @@ fn read_file() -> impl Iterator<Item = String> {
     BufReader::new(file).lines().map(|s| s.unwrap())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Packet {
     List(Vec<Packet>),
     Scalar(u32),
+}
+
+impl Ord for Packet {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Packet::Scalar(v1), Packet::Scalar(v2)) => v1.cmp(v2),
+            (Packet::List(ls1), Packet::List(ls2)) => {
+                let mut i = 0;
+                loop {
+                    if i == ls1.len() || i == ls2.len() {
+                        return ls1.len().cmp(&ls2.len());
+                    }
+                    match ls1[i].cmp(&ls2[i]) {
+                        Ordering::Less => return Ordering::Less,
+                        Ordering::Greater => return Ordering::Greater,
+                        Ordering::Equal => {}
+                    }
+                    i += 1;
+                }
+            }
+            (Packet::Scalar(v), p2) => Packet::List(vec![Packet::Scalar(*v)]).cmp(p2),
+            (p1, Packet::Scalar(v)) => p1.cmp(&Packet::List(vec![Packet::Scalar(*v)])),
+        }
+    }
+}
+
+impl PartialOrd for Packet {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl From<String> for Packet {
+    fn from(str: String) -> Self {
+        let mut stack = VecDeque::new();
+        let mut iter = str.chars().peekable();
+        while let Some(char) = iter.next() {
+            match char {
+                '[' => stack.push_back(Packet::List(Vec::new())),
+                ']' => {
+                    if stack.len() > 1 {
+                        let packet = stack.pop_back().unwrap();
+                        if let Some(Packet::List(ls)) = stack.back_mut() {
+                            ls.push(packet)
+                        }
+                    }
+                }
+                ',' => {}
+                v => {
+                    let mut d = v.to_digit(10).unwrap();
+                    match iter.peek() {
+                        Some(&v2) if v2.is_digit(10) => {
+                            d = d * 10 + v2.to_digit(10).unwrap();
+                            iter.next();
+                        }
+                        _ => {}
+                    }
+
+                    if let Some(Packet::List(ls)) = stack.back_mut() {
+                        ls.push(Packet::Scalar(d))
+                    }
+                }
+            }
+        }
+        stack.pop_back().unwrap()
+    }
 }
 
 fn parse_input(input: impl Iterator<Item = String>) -> Vec<Packet> {
@@ -22,74 +88,17 @@ fn parse_input(input: impl Iterator<Item = String>) -> Vec<Packet> {
             match line {
                 None => return None,
                 Some(s) if s.is_empty() => {}
-                Some(s) => return Some(parse_packet(s)),
+                Some(s) => return Some(Packet::from(s)),
             }
         })
         .collect_vec()
-}
-
-fn parse_packet(str: String) -> Packet {
-    let mut stack = VecDeque::new();
-
-    let mut iter = str.chars().peekable();
-    while let Some(char) = iter.next() {
-        match char {
-            '[' => stack.push_back(Packet::List(Vec::new())),
-            ']' => {
-                if stack.len() > 1 {
-                    let packet = stack.pop_back().unwrap();
-                    if let Some(Packet::List(ls)) = stack.back_mut() {
-                        ls.push(packet)
-                    }
-                }
-            }
-            ',' => {}
-            v => {
-                let mut d = v.to_digit(10).unwrap();
-                match iter.peek() {
-                    Some(&v2) if v2.is_digit(10) => {
-                        d = d * 10 + v2.to_digit(10).unwrap();
-                        iter.next();
-                    }
-                    _ => {}
-                }
-
-                if let Some(Packet::List(ls)) = stack.back_mut() {
-                    ls.push(Packet::Scalar(d))
-                }
-            }
-        }
-    }
-    stack.pop_back().unwrap()
-}
-
-fn compare(p1: &Packet, p2: &Packet) -> Ordering {
-    match (p1, p2) {
-        (Packet::Scalar(v1), Packet::Scalar(v2)) => v1.cmp(v2),
-        (Packet::List(ls1), Packet::List(ls2)) => {
-            let mut i = 0;
-            loop {
-                if i == ls1.len() || i == ls2.len() {
-                    return ls1.len().cmp(&ls2.len());
-                }
-                match compare(&ls1[i], &ls2[i]) {
-                    Ordering::Less => return Ordering::Less,
-                    Ordering::Greater => return Ordering::Greater,
-                    Ordering::Equal => {}
-                }
-                i += 1;
-            }
-        }
-        (Packet::Scalar(v), p2) => compare(&Packet::List(vec![Packet::Scalar(*v)]), p2),
-        (p1, Packet::Scalar(v)) => compare(p1, &Packet::List(vec![Packet::Scalar(*v)])),
-    }
 }
 
 fn part1(input: impl Iterator<Item = String>) -> usize {
     let packets = parse_input(input);
     let mut res = 0;
     for (i, (p1, p2)) in packets.iter().tuples().enumerate() {
-        if compare(p1, p2) == Ordering::Less {
+        if p1.cmp(p2) == Ordering::Less {
             res += i + 1;
         }
     }
@@ -102,11 +111,11 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
     let d2 = Packet::List(vec![Packet::List(vec![Packet::Scalar(6)])]);
     packets.push(d1.clone());
     packets.push(d2.clone());
-    packets.sort_by(|p1, p2| compare(p1, p2));
+    packets.sort();
 
     let mut res = 1;
     for (i, p) in packets.iter().enumerate() {
-        if compare(p, &d1) == Ordering::Equal || compare(p, &d2) == Ordering::Equal {
+        if p.cmp(&d1) == Ordering::Equal || p.cmp(&d2) == Ordering::Equal {
             res *= i + 1;
         }
     }
