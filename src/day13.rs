@@ -64,11 +64,12 @@ impl From<String> for Packet {
                 v => {
                     let mut d = v.to_digit(10).unwrap();
                     while let Some(c) = iter.peek() {
-                        if let Some(d2) = c.to_digit(10) {
-                            d = d * 10 + d2;
-                            iter.next();
-                        } else {
-                            break;
+                        match c.to_digit(10) {
+                            Some(d2) => {
+                                d = d * 10 + d2;
+                                iter.next();
+                            }
+                            None => break,
                         }
                     }
                     if let Some(Packet::List(ls)) = stack.back_mut() {
