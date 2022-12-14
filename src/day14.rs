@@ -46,7 +46,7 @@ fn parse_coord(coord_str: &str) -> Coord {
 fn part1(input: impl Iterator<Item = String>) -> u32 {
     let (mut grid, max_y) = parse_input(input);
     let mut sand = 0;
-    while let Some(sand_coord) = drop_sand(&grid, max_y + 2, usize::MAX) {
+    while let Some(sand_coord) = drop_sand(&grid, max_y, usize::MAX) {
         grid.insert(sand_coord);
         sand += 1;
     }
