@@ -1,6 +1,4 @@
 use itertools::Itertools;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 
 type Coord = (i64, i64);
 
@@ -44,44 +42,35 @@ fn part2(input: &[(Coord, Coord)], max: i64) -> i64 {
         .map(|(sc, bc)| (*sc, *bc, distance(sc, bc)))
         .collect_vec();
 
-    let min_x = distances
-        .iter()
-        .map(|((x, _y), bc, d)| *x + *d - 1)
-        .min()
-        .unwrap();
-    let max_x = distances
-        .iter()
-        .map(|((x, _y), bc, d)| *x - *d + 1)
-        .max()
-        .unwrap();
-    let min_y = distances
-        .iter()
-        .map(|((_x, y), bc, d)| *y + *d - 1)
-        .min()
-        .unwrap();
-    let max_y = distances
-        .iter()
-        .map(|((_x, y), bc, d)| *y - *d + 1)
-        .max()
-        .unwrap();
+    // Since there is only one point where the sensor ranges do not overlap, that point must be a distance of one
+    // away from at least one of the sensors. Gather the points around the border of each sensors ranges and try
+    // those. There are way fewer than 4M x 4M points.
+    let mut points = Vec::new();
+    for ((x, y), _bc, d) in distances.iter() {
+        let d = d + 1;
+        for dx in 0..(d + 1) {
+            let dy = d - dx;
+            points.push((x + dx, y + dy));
+            points.push((x - dx, y + dy));
+            points.push((x - dx, y - dy));
+            points.push((x + dx, y - dy));
+        }
+    }
 
-    let x_start = 0.max(min_x);
-    let x_end = max.min(max_x);
-    let y_start = 0.max(min_y);
-    let y_end = max.min(max_y);
-
-    for x in x_start..(x_end + 1) {
-        for y in y_start..(y_end + 1) {
-            let c = (x, y);
-            if distances
+    for c @ (x, y) in points {
+        if x >= 0
+            && x <= max
+            && y >= 0
+            && y <= max
+            && distances
                 .iter()
                 .map(|(sc, _bc, dist)| distance(sc, &c) > *dist)
                 .all(|v| v)
-            {
-                return x * 4_000_000 + y;
-            }
+        {
+            return x * 4_000_000 + y;
         }
     }
+
     return 0;
 }
 
@@ -162,8 +151,8 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        let res = part2(&INPUT, 1_500_000);
+        let res = part2(&INPUT, 4_000_000);
         println!("{}", res);
-        // assert_eq!(res, 5083287);
+        assert_eq!(res, 13134039205729);
     }
 }
