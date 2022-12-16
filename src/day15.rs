@@ -1,6 +1,4 @@
 use itertools::Itertools;
-use std::io::Read;
-use std::iter;
 
 type Coord = (i64, i64);
 
