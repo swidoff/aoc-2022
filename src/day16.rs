@@ -1,14 +1,6 @@
 use itertools::Itertools;
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::str::FromStr;
-
-fn read_file() -> impl Iterator<Item = String> {
-    let file = File::open("input/day16.txt").unwrap();
-    BufReader::new(file).lines().map(|s| s.unwrap())
-}
 
 struct Tunnel {
     target: String,
@@ -87,30 +79,18 @@ fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
     new_system
 }
 
-#[derive(Clone, Eq, Debug, PartialEq)]
-struct SolutionState {
+struct StatePart1 {
     score: u64,
     minute: u64,
     loc: String,
     opened: HashMap<String, u64>,
 }
 
-impl Ord for SolutionState {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.score.cmp(&other.score)
-    }
-}
-
-impl PartialOrd for SolutionState {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
 fn part1(input: impl Iterator<Item = String>) -> u64 {
     let system = collapse_system(parse_input(input));
     let mut q = VecDeque::new();
-    q.push_back(SolutionState {
+    let mut solutions = Vec::new();
+    q.push_back(StatePart1 {
         score: 0,
         minute: 0,
         loc: "AA".to_string(),
@@ -118,26 +98,24 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
     });
     let mut final_score = 0;
 
-    while let Some(SolutionState {
+    while let Some(StatePart1 {
         score,
         minute,
         loc,
         opened,
     }) = q.pop_back()
     {
-        if minute > 30 {
-            continue;
-        }
-
-        if score > final_score {
-            final_score = score;
-            println!("{}: {:?}", score, opened);
-        }
+        final_score = final_score.max(score);
 
         for Tunnel { target, steps } in &system.get(&loc).unwrap().tunnels {
             if !opened.contains_key(target) {
                 let mut opened = opened.clone();
                 let new_minute = minute + steps + 1;
+                if new_minute > 30 {
+                    solutions.push((score, opened));
+                    continue;
+                }
+
                 opened.insert(target.clone(), new_minute);
                 let new_score = score
                     + if new_minute > 29 {
@@ -146,7 +124,7 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
                         (30 - new_minute) * system.get(target).unwrap().flow
                     };
 
-                q.push_back(SolutionState {
+                q.push_back(StatePart1 {
                     score: new_score,
                     minute: new_minute,
                     loc: target.clone(),
@@ -155,16 +133,78 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
             }
         }
     }
+    println!("{}", solutions.len());
     final_score
 }
 
-fn part2(_input: impl Iterator<Item = String>) -> u32 {
-    unimplemented!()
+struct StatePart2 {
+    score: u64,
+    pos: [(String, u64); 2],
+    opened: HashMap<String, u64>,
+}
+
+fn part2(input: impl Iterator<Item = String>) -> u64 {
+    let system = collapse_system(parse_input(input));
+    let mut q = VecDeque::new();
+    q.push_back(StatePart2 {
+        score: 0,
+        pos: [("AA".to_string(), 0), ("AA".to_string(), 0)],
+        opened: Default::default(),
+    });
+    let mut final_score = 0;
+    let mut seen = HashMap::new();
+
+    while let Some(StatePart2 { score, pos, opened }) = q.pop_back() {
+        if score > final_score {
+            final_score = score;
+        }
+
+        if let Some(old_score) = seen.get(&pos) {
+            if score < *old_score {
+                continue;
+            }
+        } else {
+            let new_pos = [pos[0].clone(), pos[1].clone()];
+            seen.insert(new_pos.clone(), score);
+            seen.insert(pos.clone(), score);
+        }
+
+        let turn = if pos[0].1 <= pos[1].1 { 0 } else { 1 };
+        let (loc, minute) = &pos[turn];
+
+        for Tunnel { target, steps } in &system.get(loc).unwrap().tunnels {
+            if !opened.contains_key(target) {
+                let mut opened = opened.clone();
+                let new_minute = *minute + steps + 1;
+                if new_minute > 26 {
+                    continue;
+                }
+
+                opened.insert(target.clone(), new_minute);
+                let new_score = score
+                    + if new_minute > 25 {
+                        0
+                    } else {
+                        (26 - new_minute) * system.get(target).unwrap().flow
+                    };
+
+                let mut new_pos = pos.clone();
+                new_pos[turn] = (target.clone(), new_minute);
+
+                q.push_back(StatePart2 {
+                    score: new_score,
+                    pos: new_pos,
+                    opened,
+                })
+            }
+        }
+    }
+    final_score
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{part1, part2, read_file};
+    use super::{part1, part2};
 
     const EXAMPLE: &str = "AA 0 DD II BB
 BB 13 CC AA
@@ -252,13 +292,15 @@ EM 0 QJ JS
 
     #[test]
     fn test_part2_example() {
-        assert_eq!(part2(EXAMPLE.lines().map(|v| v.to_string())), 0);
+        assert_eq!(part2(EXAMPLE.lines().map(|v| v.to_string())), 1707);
     }
 
     #[test]
     fn test_part2() {
-        let res = part2(read_file());
+        let res = part2(INPUT.lines().map(|v| v.to_string()));
         println!("{}", res);
-        // assert_eq!(res, 0);
+        assert_eq!(res, 0);
+
+        // 2168
     }
 }
