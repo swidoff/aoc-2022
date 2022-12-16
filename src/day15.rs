@@ -1,4 +1,6 @@
 use itertools::Itertools;
+use std::io::Read;
+use std::iter;
 
 type Coord = (i64, i64);
 
@@ -45,32 +47,30 @@ fn part2(input: &[(Coord, Coord)], max: i64) -> i64 {
     // Since there is only one point where the sensor ranges do not overlap, that point must be a distance of one
     // away from at least one of the sensors. Gather the points around the border of each sensors ranges and try
     // those. There are way fewer than 4M x 4M points.
-    let mut points = Vec::new();
     for ((x, y), _bc, d) in distances.iter() {
         let d = d + 1;
         for dx in 0..(d + 1) {
             let dy = d - dx;
-            points.push((x + dx, y + dy));
-            points.push((x - dx, y + dy));
-            points.push((x - dx, y - dy));
-            points.push((x + dx, y - dy));
+            for c @ (x, y) in [
+                (x + dx, y + dy),
+                (x - dx, y + dy),
+                (x - dx, y - dy),
+                (x + dx, y - dy),
+            ] {
+                if x >= 0
+                    && x <= max
+                    && y >= 0
+                    && y <= max
+                    && distances
+                        .iter()
+                        .map(|(sc, _bc, dist)| distance(sc, &c) > *dist)
+                        .all(|v| v)
+                {
+                    return x * 4_000_000 + y;
+                }
+            }
         }
     }
-
-    for c @ (x, y) in points {
-        if x >= 0
-            && x <= max
-            && y >= 0
-            && y <= max
-            && distances
-                .iter()
-                .map(|(sc, _bc, dist)| distance(sc, &c) > *dist)
-                .all(|v| v)
-        {
-            return x * 4_000_000 + y;
-        }
-    }
-
     return 0;
 }
 
