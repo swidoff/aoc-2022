@@ -109,41 +109,44 @@ impl PartialOrd for SolutionState {
 
 fn part1(input: impl Iterator<Item = String>) -> u64 {
     let system = collapse_system(parse_input(input));
-    let mut q = BinaryHeap::new();
-    q.push(SolutionState {
+    let mut q = VecDeque::new();
+    q.push_back(SolutionState {
         score: 0,
-        minute: 1,
+        minute: 0,
         loc: "AA".to_string(),
         opened: Default::default(),
     });
+    let mut final_score = 0;
 
     while let Some(SolutionState {
         score,
         minute,
         loc,
         opened,
-    }) = q.pop()
+    }) = q.pop_back()
     {
         if minute > 30 {
             continue;
-        } else if minute == 30 {
-            println!("{:?}", opened);
-            return score;
+        }
+
+        if score > final_score {
+            final_score = score;
+            println!("{}: {:?}", score, opened);
         }
 
         for Tunnel { target, steps } in &system.get(&loc).unwrap().tunnels {
-            if !opened.contains_key(target) && system.get(target).unwrap().flow > 0 {
+            if !opened.contains_key(target) {
                 let mut opened = opened.clone();
                 let new_minute = minute + steps + 1;
                 opened.insert(target.clone(), new_minute);
                 let new_score = score
-                    + if new_minute > 30 {
+                    + if new_minute > 29 {
                         0
                     } else {
                         (30 - new_minute) * system.get(target).unwrap().flow
                     };
 
-                q.push(SolutionState {
+                q.push_back(SolutionState {
                     score: new_score,
                     minute: new_minute,
                     loc: target.clone(),
@@ -152,7 +155,7 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
             }
         }
     }
-    0
+    final_score
 }
 
 fn part2(_input: impl Iterator<Item = String>) -> u32 {
@@ -175,6 +178,66 @@ II 0 AA JJ
 JJ 21 II
 ";
 
+    const INPUT: &str = "GJ 14 UV AO MM UD GM
+HE 0 QE SV
+ET 0 LU SB
+SG 0 FF SB
+LC 0 QJ GM
+EE 13 RE BR
+AA 0 QC ZR NT JG FO
+TF 0 LU MM
+GO 0 LB AH
+QE 24 LG HE
+MI 0 KU FF
+BR 0 HY EE
+UV 0 GP GJ
+EH 0 UU FF
+WK 0 HY EL
+NT 0 FF AA
+KI 0 OQ AO
+AH 22 GO RE
+EL 0 WK SQ
+GP 0 SB UV
+GM 0 LC GJ
+LU 9 UU DW TF ET ML
+LB 0 GO VI
+QC 0 ML AA
+JJ 0 QJ DV
+MM 0 TF GJ
+VI 18 LB
+NV 0 SB KU
+VT 0 HY JG
+RE 0 AH EE
+FO 0 SB AA
+DV 10 JH UD JJ
+SQ 12 EL QA
+OQ 23 KI IV JS
+FF 3 EU NT SG MI EH
+IV 0 LG OQ
+HY 8 VT BR WK
+ML 0 LU QC
+JS 0 EM OQ
+KU 5 MI VL NV HU DW
+QA 0 OS SQ
+EU 0 FF OS
+SV 0 QJ HE
+JG 0 AA VT
+DW 0 LU KU
+UD 0 DV GJ
+QJ 17 JJ SV LC EM YA
+HU 0 JH KU
+ZR 0 AA VL
+YA 0 QJ OS
+JH 0 HU DV
+OS 15 EU YA QA
+LG 0 QE IV
+SB 4 FO SG NV GP ET
+UU 0 EH LU
+VL 0 ZR KU
+AO 0 GJ KI
+EM 0 QJ JS
+";
+
     #[test]
     fn test_part1_example() {
         assert_eq!(part1(EXAMPLE.lines().map(|v| v.to_string())), 1651);
@@ -182,7 +245,7 @@ JJ 21 II
 
     #[test]
     fn test_part1() {
-        let res = part1(read_file());
+        let res = part1(INPUT.lines().map(|v| v.to_string()));
         println!("{}", res);
         // assert_eq!(res, 0);
     }
