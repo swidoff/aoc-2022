@@ -40,47 +40,48 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, Valve> {
 struct CollapseState {
     loc: String,
     steps: u64,
-    seen: HashSet<String>,
 }
 
 fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
     let mut new_system = HashMap::new();
     for (valve_name, valve) in system.iter() {
         if valve_name.as_str() == "AA" || valve.flow > 0 {
-            let mut new_valve = Valve {
-                flow: valve.flow,
-                tunnels: Vec::new(),
-            };
-
             let mut q = VecDeque::new();
-            let mut seen = HashSet::new();
-            seen.insert(valve_name.clone());
+            let mut distances = HashMap::new();
+            distances.insert(valve_name.clone(), 0);
             q.push_back(CollapseState {
                 loc: valve_name.clone(),
                 steps: 0,
-                seen,
             });
-            while let Some(CollapseState { loc, steps, seen }) = q.pop_back() {
-                for next in &system.get(&loc).unwrap().tunnels {
-                    let flow = system.get(&next.target).unwrap().flow;
-                    if flow > 0 {
-                        new_valve.tunnels.push(Tunnel {
-                            target: next.target.clone(),
-                            steps: steps + 1,
-                        });
-                    } else if !seen.contains(&next.target) {
-                        let mut seen = seen.clone();
-                        seen.insert(loc.clone());
+            while let Some(CollapseState { loc, steps }) = q.pop_back() {
+                let new_steps = steps + 1;
+                for Tunnel { target, .. } in &system.get(&loc).unwrap().tunnels {
+                    if *distances.get(target).unwrap_or(&u64::MAX) > new_steps {
+                        distances.insert(target.clone(), new_steps);
                         q.push_back(CollapseState {
-                            loc: next.target.clone(),
-                            steps: steps + 1,
-                            seen,
+                            loc: target.clone(),
+                            steps: new_steps,
                         })
                     }
                 }
             }
 
-            new_system.insert(valve_name.clone(), new_valve);
+            let mut tunnels = Vec::new();
+            for (target, steps) in distances {
+                if system.get(&target).unwrap().flow > 0 {
+                    tunnels.push(Tunnel {
+                        target: target.clone(),
+                        steps,
+                    })
+                }
+            }
+            new_system.insert(
+                valve_name.clone(),
+                Valve {
+                    flow: valve.flow,
+                    tunnels,
+                },
+            );
         }
     }
     new_system
@@ -115,7 +116,6 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
         loc: "AA".to_string(),
         opened: Default::default(),
     });
-    let mut final_score = 0;
 
     while let Some(SolutionState {
         score,
@@ -132,34 +132,27 @@ fn part1(input: impl Iterator<Item = String>) -> u64 {
         }
 
         for Tunnel { target, steps } in &system.get(&loc).unwrap().tunnels {
-            let new_minute = minute + steps;
-            q.push(SolutionState {
-                score,
-                minute: new_minute,
-                loc: target.clone(),
-                opened: opened.clone(),
-            });
-
             if !opened.contains_key(target) && system.get(target).unwrap().flow > 0 {
                 let mut opened = opened.clone();
-                opened.insert(target.clone(), new_minute + 1);
+                let new_minute = minute + steps + 1;
+                opened.insert(target.clone(), new_minute);
                 let new_score = score
-                    + if minute > 29 {
+                    + if new_minute > 30 {
                         0
                     } else {
-                        (30 - (minute + 1)) * system.get(target).unwrap().flow
+                        (30 - new_minute) * system.get(target).unwrap().flow
                     };
 
                 q.push(SolutionState {
                     score: new_score,
-                    minute: new_minute + 2,
+                    minute: new_minute,
                     loc: target.clone(),
                     opened,
                 })
             }
         }
     }
-    final_score
+    0
 }
 
 fn part2(_input: impl Iterator<Item = String>) -> u32 {
