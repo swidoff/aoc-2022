@@ -129,11 +129,12 @@ struct StatePart2 {
 fn solve_part2(
     system: &HashMap<String, Valve>,
     state: StatePart2,
+    prev_turn: usize,
     best_scores: &mut HashMap<StatePart2, i64>,
 ) -> i64 {
-    if let Some(&score) = best_scores.get(&state) {
-        return score;
-    }
+    // if let Some(&score) = best_scores.get(&state) {
+    //     return score;
+    // }
 
     let turn = if state.remaining_minutes[0] >= state.remaining_minutes[1] {
         0
@@ -161,24 +162,24 @@ fn solve_part2(
                 locs,
                 opened: state.opened | target_valve.bit,
             };
-            let score = solve_part2(&system, new_state, best_scores);
+            let score = solve_part2(&system, new_state, turn, best_scores);
             best_score = best_score.max(score);
         }
     }
 
-    let score = valves[turn].flow * state.remaining_minutes[turn] + best_score;
-    best_scores.insert(
-        StatePart2 {
-            locs: [state.locs[1].clone(), state.locs[0].clone()],
-            remaining_minutes: [
-                state.remaining_minutes[1].clone(),
-                state.remaining_minutes[0].clone(),
-            ],
-            opened: state.opened.clone(),
-        },
-        score,
-    );
-    best_scores.insert(state, score);
+    let score = valves[prev_turn].flow * state.remaining_minutes[prev_turn] + best_score;
+    // best_scores.insert(
+    //     StatePart2 {
+    //         locs: [state.locs[1].clone(), state.locs[0].clone()],
+    //         remaining_minutes: [
+    //             state.remaining_minutes[1].clone(),
+    //             state.remaining_minutes[0].clone(),
+    //         ],
+    //         opened: state.opened.clone(),
+    //     },
+    //     score,
+    // );
+    // best_scores.insert(state, score);
     score
 }
 
@@ -190,7 +191,7 @@ fn part2(input: impl Iterator<Item = String>) -> i64 {
         opened: 0,
     };
     let mut best_scores = HashMap::new();
-    solve_part2(&system, initial_state, &mut best_scores)
+    solve_part2(&system, initial_state, 0, &mut best_scores)
 }
 
 #[cfg(test)]
