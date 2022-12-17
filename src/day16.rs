@@ -1,14 +1,15 @@
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 
 struct Tunnel {
     target: String,
-    steps: u64,
+    steps: i64,
 }
 
 struct Valve {
-    flow: u64,
+    bit: u64,
+    flow: i64,
     tunnels: Vec<Tunnel>,
 }
 
@@ -17,21 +18,26 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, Valve> {
     for line in input {
         let mut parts = line.split_whitespace();
         let name = parts.next().unwrap().to_string();
-        let flow = u64::from_str(parts.next().unwrap()).unwrap();
+        let flow = i64::from_str(parts.next().unwrap()).unwrap();
         let tunnels = parts
             .map(|s| Tunnel {
                 target: s.to_string(),
                 steps: 1,
             })
             .collect_vec();
-        res.insert(name, Valve { flow, tunnels });
+
+        let mut bit = 1;
+        let mut chars = name.chars();
+        bit <<= (u64::from(chars.next().unwrap()) - u64::from('A')) + 26;
+        bit <<= u64::from(chars.next().unwrap()) - u64::from('A');
+        res.insert(name, Valve { bit, flow, tunnels });
     }
     res
 }
 
 struct CollapseState {
     loc: String,
-    steps: u64,
+    steps: i64,
 }
 
 fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
@@ -48,7 +54,7 @@ fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
             while let Some(CollapseState { loc, steps }) = q.pop_back() {
                 let new_steps = steps + 1;
                 for Tunnel { target, .. } in &system.get(&loc).unwrap().tunnels {
-                    if *distances.get(target).unwrap_or(&u64::MAX) > new_steps {
+                    if *distances.get(target).unwrap_or(&i64::MAX) > new_steps {
                         distances.insert(target.clone(), new_steps);
                         q.push_back(CollapseState {
                             loc: target.clone(),
@@ -70,6 +76,7 @@ fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
             new_system.insert(
                 valve_name.clone(),
                 Valve {
+                    bit: valve.bit,
                     flow: valve.flow,
                     tunnels,
                 },
@@ -79,127 +86,126 @@ fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
     new_system
 }
 
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
 struct StatePart1 {
-    score: u64,
-    minute: u64,
     loc: String,
-    opened: HashMap<String, u64>,
+    opened: u64,
+    remaining_minutes: i64,
 }
 
-fn part1(input: impl Iterator<Item = String>) -> u64 {
+fn solve_part1(
+    system: &HashMap<String, Valve>,
+    state: StatePart1,
+    best_scores: &mut HashMap<StatePart1, i64>,
+) -> i64 {
+    if let Some(&score) = best_scores.get(&state) {
+        return score;
+    }
+
+    let mut best_score = 0;
+    let valve = system.get(&state.loc).unwrap();
+    for Tunnel { target, steps } in &valve.tunnels {
+        let target_valve = system.get(target).unwrap();
+        let new_remaining_minutes = state.remaining_minutes - steps - 1;
+        if new_remaining_minutes >= 0 && state.opened & target_valve.bit == 0 {
+            let new_state = StatePart1 {
+                remaining_minutes: new_remaining_minutes,
+                loc: target.clone(),
+                opened: state.opened | target_valve.bit,
+            };
+            let score = solve_part1(&system, new_state, best_scores);
+            best_score = best_score.max(score);
+        }
+    }
+
+    let score = valve.flow * state.remaining_minutes + best_score;
+    best_scores.insert(state, score);
+    score
+}
+
+fn part1(input: impl Iterator<Item = String>) -> i64 {
     let system = collapse_system(parse_input(input));
-    let mut q = VecDeque::new();
-    let mut solutions = Vec::new();
-    q.push_back(StatePart1 {
-        score: 0,
-        minute: 0,
+    let initial_state = StatePart1 {
         loc: "AA".to_string(),
-        opened: Default::default(),
-    });
-    let mut final_score = 0;
-
-    while let Some(StatePart1 {
-        score,
-        minute,
-        loc,
-        opened,
-    }) = q.pop_back()
-    {
-        final_score = final_score.max(score);
-
-        for Tunnel { target, steps } in &system.get(&loc).unwrap().tunnels {
-            if !opened.contains_key(target) {
-                let mut opened = opened.clone();
-                let new_minute = minute + steps + 1;
-                if new_minute > 30 {
-                    solutions.push((score, opened));
-                    continue;
-                }
-
-                opened.insert(target.clone(), new_minute);
-                let new_score = score
-                    + if new_minute > 29 {
-                        0
-                    } else {
-                        (30 - new_minute) * system.get(target).unwrap().flow
-                    };
-
-                q.push_back(StatePart1 {
-                    score: new_score,
-                    minute: new_minute,
-                    loc: target.clone(),
-                    opened,
-                })
-            }
-        }
-    }
-    println!("{}", solutions.len());
-    final_score
+        opened: 0,
+        remaining_minutes: 30,
+    };
+    let mut best_scores = HashMap::new();
+    solve_part1(&system, initial_state, &mut best_scores)
 }
 
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
 struct StatePart2 {
-    score: u64,
-    pos: [(String, u64); 2],
-    opened: HashMap<String, u64>,
+    locs: [String; 2],
+    opened: u64,
+    remaining_minutes: [i64; 2],
 }
 
-fn part2(input: impl Iterator<Item = String>) -> u64 {
-    let system = collapse_system(parse_input(input));
-    let mut q = VecDeque::new();
-    q.push_back(StatePart2 {
-        score: 0,
-        pos: [("AA".to_string(), 0), ("AA".to_string(), 0)],
-        opened: Default::default(),
-    });
-    let mut final_score = 0;
-    let mut seen = HashMap::new();
+fn solve_part2(
+    system: &HashMap<String, Valve>,
+    state: StatePart2,
+    best_scores: &mut HashMap<StatePart2, i64>,
+) -> i64 {
+    if let Some(&score) = best_scores.get(&state) {
+        return score;
+    }
 
-    while let Some(StatePart2 { score, pos, opened }) = q.pop_back() {
-        if score > final_score {
-            final_score = score;
-        }
+    let turn = if state.remaining_minutes[0] >= state.remaining_minutes[1] {
+        0
+    } else {
+        1
+    };
 
-        if let Some(old_score) = seen.get(&pos) {
-            if score < *old_score {
-                continue;
-            }
-        } else {
-            let new_pos = [pos[0].clone(), pos[1].clone()];
-            seen.insert(new_pos.clone(), score);
-            seen.insert(pos.clone(), score);
-        }
+    let mut best_score = 0;
+    let valves = [
+        system.get(&state.locs[0]).unwrap(),
+        system.get(&state.locs[1]).unwrap(),
+    ];
+    for Tunnel { target, steps } in &valves[turn].tunnels {
+        let target_valve = system.get(target).unwrap();
+        let new_remaining_minutes = state.remaining_minutes[turn] - steps - 1;
+        if new_remaining_minutes >= 0 && state.opened & target_valve.bit == 0 {
+            let mut remaining_minutes = state.remaining_minutes.clone();
+            remaining_minutes[turn] = new_remaining_minutes;
 
-        let turn = if pos[0].1 <= pos[1].1 { 0 } else { 1 };
-        let (loc, minute) = &pos[turn];
+            let mut locs = state.locs.clone();
+            locs[turn] = target.clone();
 
-        for Tunnel { target, steps } in &system.get(loc).unwrap().tunnels {
-            if !opened.contains_key(target) {
-                let mut opened = opened.clone();
-                let new_minute = *minute + steps + 1;
-                if new_minute > 26 {
-                    continue;
-                }
-
-                opened.insert(target.clone(), new_minute);
-                let new_score = score
-                    + if new_minute > 25 {
-                        0
-                    } else {
-                        (26 - new_minute) * system.get(target).unwrap().flow
-                    };
-
-                let mut new_pos = pos.clone();
-                new_pos[turn] = (target.clone(), new_minute);
-
-                q.push_back(StatePart2 {
-                    score: new_score,
-                    pos: new_pos,
-                    opened,
-                })
-            }
+            let new_state = StatePart2 {
+                remaining_minutes,
+                locs,
+                opened: state.opened | target_valve.bit,
+            };
+            let score = solve_part2(&system, new_state, best_scores);
+            best_score = best_score.max(score);
         }
     }
-    final_score
+
+    let score = valves[turn].flow * state.remaining_minutes[turn] + best_score;
+    best_scores.insert(
+        StatePart2 {
+            locs: [state.locs[1].clone(), state.locs[0].clone()],
+            remaining_minutes: [
+                state.remaining_minutes[1].clone(),
+                state.remaining_minutes[0].clone(),
+            ],
+            opened: state.opened.clone(),
+        },
+        score,
+    );
+    best_scores.insert(state, score);
+    score
+}
+
+fn part2(input: impl Iterator<Item = String>) -> i64 {
+    let system = collapse_system(parse_input(input));
+    let initial_state = StatePart2 {
+        locs: ["AA".to_string(), "AA".to_string()],
+        remaining_minutes: [26, 26],
+        opened: 0,
+    };
+    let mut best_scores = HashMap::new();
+    solve_part2(&system, initial_state, &mut best_scores)
 }
 
 #[cfg(test)]
@@ -287,7 +293,7 @@ EM 0 QJ JS
     fn test_part1() {
         let res = part1(INPUT.lines().map(|v| v.to_string()));
         println!("{}", res);
-        // assert_eq!(res, 0);
+        assert_eq!(res, 1728);
     }
 
     #[test]
@@ -299,8 +305,6 @@ EM 0 QJ JS
     fn test_part2() {
         let res = part2(INPUT.lines().map(|v| v.to_string()));
         println!("{}", res);
-        assert_eq!(res, 0);
-
-        // 2168
+        assert_eq!(res, 2304);
     }
 }
