@@ -15,7 +15,7 @@ struct Valve {
 
 fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, Valve> {
     let mut res = HashMap::new();
-    for line in input {
+    for (i, line) in input.enumerate() {
         let mut parts = line.split_whitespace();
         let name = parts.next().unwrap().to_string();
         let flow = i64::from_str(parts.next().unwrap()).unwrap();
@@ -26,10 +26,7 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, Valve> {
             })
             .collect_vec();
 
-        let mut bit = 1;
-        let mut chars = name.chars();
-        bit <<= (u64::from(chars.next().unwrap()) - u64::from('A')) + 26;
-        bit <<= u64::from(chars.next().unwrap()) - u64::from('A');
+        let bit = 1 << i;
         res.insert(name, Valve { bit, flow, tunnels });
     }
     res
@@ -90,37 +87,26 @@ fn collapse_system(system: HashMap<String, Valve>) -> HashMap<String, Valve> {
 struct StatePart1 {
     loc: String,
     opened: u64,
-    remaining_minutes: i64,
+    minutes: i64,
 }
 
-fn solve_part1(
-    system: &HashMap<String, Valve>,
-    state: StatePart1,
-    best_scores: &mut HashMap<StatePart1, i64>,
-) -> i64 {
-    if let Some(&score) = best_scores.get(&state) {
-        return score;
-    }
-
+fn solve_part1(system: &HashMap<String, Valve>, state: StatePart1) -> i64 {
     let mut best_score = 0;
     let valve = system.get(&state.loc).unwrap();
     for Tunnel { target, steps } in &valve.tunnels {
         let target_valve = system.get(target).unwrap();
-        let new_remaining_minutes = state.remaining_minutes - steps - 1;
-        if new_remaining_minutes >= 0 && state.opened & target_valve.bit == 0 {
+        let new_minutes = state.minutes + steps + 1;
+        if new_minutes <= 30 && state.opened & target_valve.bit == 0 {
             let new_state = StatePart1 {
-                remaining_minutes: new_remaining_minutes,
                 loc: target.clone(),
                 opened: state.opened | target_valve.bit,
+                minutes: new_minutes,
             };
-            let score = solve_part1(&system, new_state, best_scores);
+            let score = solve_part1(&system, new_state);
             best_score = best_score.max(score);
         }
     }
-
-    let score = valve.flow * state.remaining_minutes + best_score;
-    best_scores.insert(state, score);
-    score
+    valve.flow * (30 - state.minutes) + best_score
 }
 
 fn part1(input: impl Iterator<Item = String>) -> i64 {
@@ -128,17 +114,16 @@ fn part1(input: impl Iterator<Item = String>) -> i64 {
     let initial_state = StatePart1 {
         loc: "AA".to_string(),
         opened: 0,
-        remaining_minutes: 30,
+        minutes: 0,
     };
-    let mut best_scores = HashMap::new();
-    solve_part1(&system, initial_state, &mut best_scores)
+    solve_part1(&system, initial_state)
 }
 
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
 struct StatePart2 {
     locs: [String; 2],
-    opened: u64,
     remaining_minutes: [i64; 2],
+    opened: u64,
 }
 
 fn solve_part2(
