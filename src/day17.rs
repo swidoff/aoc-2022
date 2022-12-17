@@ -46,60 +46,12 @@ fn new_rock(rock_type: i32, left_x: i64, bottom_y: i64) -> Vec<Coord> {
 }
 
 fn part1(directions: String) -> i64 {
-    let mut height = 0;
-    let mut chamber = HashSet::new();
-    let width = 7;
-    let mut rock_type = 0;
-    let mut dir_iter = directions.chars().cycle();
-
-    for _ in 0..2022 {
-        // for _ in 0..=15 {
-        let mut rock = new_rock(rock_type, 2, height + 3);
-        let mut turn = 0;
-        loop {
-            let dir = if turn % 2 == 0 {
-                dir_iter.next().unwrap()
-            } else {
-                'v'
-            };
-            turn = (turn + 1) % 2;
-
-            rock = match dir {
-                'v' => {
-                    let new_rock = rock.iter().map(|&(x, y)| (x, y - 1)).collect_vec();
-                    if new_rock
-                        .iter()
-                        .any(|c @ (_x, y)| *y < 0 || chamber.contains(c))
-                    {
-                        break;
-                    }
-                    new_rock
-                }
-                c @ '<' | c @ '>' => {
-                    let dx = if c == '>' { 1 } else { -1 };
-                    let new_rock = rock.iter().map(|&(x, y)| (x + dx, y)).collect_vec();
-                    if new_rock
-                        .iter()
-                        .any(|c @ (x, _y)| *x < 0 || *x >= width || chamber.contains(c))
-                    {
-                        continue;
-                    }
-                    new_rock
-                }
-                _ => panic!(),
-            };
-        }
-
-        for c @ (_x, y) in rock {
-            chamber.insert(c);
-            height = height.max(y + 1);
-        }
-
-        rock_type = (rock_type + 1) % 5;
-        // println!("Height: {}", height);
-        // print_chamber(&chamber);
-    }
-    height
+    let initial_state = State {
+        rock_type: 0,
+        dir_pos: 0,
+        chamber: "".to_string(),
+    };
+    solve(&initial_state, &directions, 2022).extra_height
 }
 
 fn print_chamber(chamber: &HashSet<Coord>) {
@@ -227,11 +179,11 @@ fn part2(directions: String) -> i64 {
             state = solution.new_state.clone();
         }
     }
-    // let sol1 = solve(&initial_state, &directions, 1000);
-    // let sol2 = solve(&sol1.new_state, &directions, 1000);
-    // let sol3 = solve(&initial_state, &directions, 2000);
-    // assert_eq!(sol2.new_state, sol3.new_state);
-    // assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
+    let sol1 = solve(&initial_state, &directions, 1000);
+    let sol2 = solve(&sol1.new_state, &directions, 1000);
+    let sol3 = solve(&initial_state, &directions, 2000);
+    assert_eq!(sol2.new_state, sol3.new_state);
+    assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
 
     height
 }
