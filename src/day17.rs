@@ -151,14 +151,50 @@ fn solve(state: &State, directions: &String, num_rocks: i64) -> Solution {
     }
 }
 
-fn part2(directions: String) -> i64 {
-    let mut rocks_remaining: i64 = 1_000_000_000_000;
-    let mut height = 0;
+fn solve_n(directions: &String, n: i64) -> i64 {
     let initial_state = State {
         rock_type: 0,
         dir_pos: 0,
         chamber: "".to_string(),
     };
+
+    // Sanity checks.
+    let sol1 = solve(&initial_state, &directions, 1000);
+    let sol2 = solve(&sol1.new_state, &directions, 1000);
+    let sol3 = solve(&initial_state, &directions, 2000);
+    let sol4 = solve(&sol3.new_state, &directions, 2000);
+    let sol5 = solve(&initial_state, &directions, 4000);
+    assert_eq!(
+        memoize(&restore(&sol2.new_state.chamber)),
+        sol2.new_state.chamber
+    );
+    assert_eq!(sol2.new_state, sol3.new_state);
+    assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
+    assert_eq!(sol4.new_state, sol5.new_state);
+    assert_eq!(sol3.extra_height + sol4.extra_height, sol5.extra_height);
+
+    let sol1 = solve(&initial_state, &directions, 1);
+    let sol2 = solve(&sol1.new_state, &directions, 1);
+    let sol3 = solve(&initial_state, &directions, 2);
+    assert_eq!(sol2.new_state, sol3.new_state);
+    assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
+
+    let sol1 = solve(&initial_state, &directions, 14);
+    let sol2 = solve(&sol1.new_state, &directions, 23);
+    let sol3 = solve(&sol2.new_state, &directions, 12);
+    let sol4 = solve(&initial_state, &directions, 49);
+    assert_eq!(sol3.new_state, sol4.new_state);
+    assert_eq!(
+        sol1.extra_height + sol2.extra_height + sol3.extra_height,
+        sol4.extra_height
+    );
+    assert_eq!(
+        sol1.num_rocks + sol2.num_rocks + sol3.num_rocks,
+        sol4.num_rocks
+    );
+
+    let mut rocks_remaining: i64 = n;
+    let mut height = 0;
     let mut state = initial_state.clone();
     let mut memo: HashMap<State, Solution> = HashMap::new();
 
@@ -188,27 +224,18 @@ fn part2(directions: String) -> i64 {
             }
         }
     }
-    let sol1 = solve(&initial_state, &directions, 1000);
-    let sol2 = solve(&sol1.new_state, &directions, 1000);
-    let sol3 = solve(&initial_state, &directions, 2000);
-    let sol4 = solve(&sol3.new_state, &directions, 2000);
-    let sol5 = solve(&initial_state, &directions, 4000);
-    assert_eq!(
-        memoize(&restore(&sol2.new_state.chamber)),
-        sol2.new_state.chamber
-    );
-    assert_eq!(sol2.new_state, sol3.new_state);
-    assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
-    assert_eq!(sol4.new_state, sol5.new_state);
-    assert_eq!(sol3.extra_height + sol4.extra_height, sol5.extra_height);
     assert_eq!(rocks_remaining, 0);
     height
+}
+
+fn part2(directions: String) -> i64 {
+    solve_n(&directions, 1_000_000_000_000)
 }
 
 fn memoize(chamber: &HashSet<Coord>) -> String {
     let mut buf = String::new();
     let max_height = chamber.iter().map(|(_x, y)| *y).max().unwrap_or(0);
-    let min_height = (max_height - 20).max(0);
+    let min_height = (max_height - 20).max(1);
     for y in (min_height..=max_height).rev() {
         buf.push('|');
         for x in 1..=7 {
@@ -239,6 +266,7 @@ fn restore(memo: &String) -> HashSet<Coord> {
 #[cfg(test)]
 mod tests {
     use super::{part1, part2, read_file};
+    use crate::day17::solve_n;
 
     const EXAMPLE: &str = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>";
 
@@ -256,6 +284,8 @@ mod tests {
 
     #[test]
     fn test_part2_example() {
+        assert_eq!(solve_n(&EXAMPLE.to_string(), 2022), 3068);
+        assert_eq!(solve_n(&read_file(), 2022), 3109);
         assert_eq!(part2(EXAMPLE.to_string()), 1514285714288);
     }
 
@@ -263,7 +293,7 @@ mod tests {
     fn test_part2() {
         let res = part2(read_file());
         println!("{}", res);
-        // assert_eq!(res, 0);
+        assert_eq!(res, 0);
         // 1604165057486 -- Too high
         // 1283527810131 -- Too low
     }
