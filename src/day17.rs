@@ -87,20 +87,20 @@ struct Solution {
 
 fn solve(state: &State, directions: &String, num_rocks: i64) -> Solution {
     let mut chamber = restore(&state.chamber);
-    let initial_height = chamber.iter().map(|&(_x, y)| y + 1).max().unwrap_or(0);
-    let mut height = chamber.iter().map(|&(_x, y)| y).max().unwrap_or(0);
+    let initial_height = chamber.iter().map(|&(_x, y)| y).max().unwrap_or(0);
+    let mut height = initial_height;
     let width = 7;
     let mut rock_type = state.rock_type;
     let mut dir_iter = directions.chars().enumerate().cycle().skip(state.dir_pos);
     let mut dir_pos = state.dir_pos;
 
     for _i in 0..num_rocks {
-        let mut rock = new_rock(rock_type, 2, height + 3);
+        let mut rock = new_rock(rock_type, 3, height + 4);
         let mut turn = 0;
         loop {
             let dir = if turn % 2 == 0 {
                 let (pos, dir) = dir_iter.next().unwrap();
-                dir_pos = pos + 2;
+                dir_pos = pos;
                 dir
             } else {
                 'v'
@@ -112,7 +112,7 @@ fn solve(state: &State, directions: &String, num_rocks: i64) -> Solution {
                     let new_rock = rock.iter().map(|&(x, y)| (x, y - 1)).collect_vec();
                     if new_rock
                         .iter()
-                        .any(|c @ (_x, y)| *y < 0 || chamber.contains(c))
+                        .any(|c @ (_x, y)| *y == 0 || chamber.contains(c))
                     {
                         break;
                     }
@@ -123,7 +123,7 @@ fn solve(state: &State, directions: &String, num_rocks: i64) -> Solution {
                     let new_rock = rock.iter().map(|&(x, y)| (x + dx, y)).collect_vec();
                     if new_rock
                         .iter()
-                        .any(|c @ (x, _y)| *x < 0 || *x >= width || chamber.contains(c))
+                        .any(|c @ (x, _y)| *x <= 0 || *x > width || chamber.contains(c))
                     {
                         continue;
                     }
@@ -135,15 +135,15 @@ fn solve(state: &State, directions: &String, num_rocks: i64) -> Solution {
 
         for c @ (_x, y) in rock {
             chamber.insert(c);
-            height = height.max(y + 1);
+            height = height.max(y);
         }
-
         rock_type = (rock_type + 1) % 5;
     }
+
     Solution {
         new_state: State {
             rock_type,
-            dir_pos,
+            dir_pos: (dir_pos + 1) % directions.len(),
             chamber: memoize(&chamber),
         },
         extra_height: height - initial_height,
@@ -159,42 +159,55 @@ fn part2(directions: String) -> i64 {
         dir_pos: 0,
         chamber: "".to_string(),
     };
-    let mut state = State {
-        rock_type: 0,
-        dir_pos: 0,
-        chamber: "".to_string(),
-    };
+    let mut state = initial_state.clone();
+    let mut memo: HashMap<State, Solution> = HashMap::new();
 
     while rocks_remaining > 0 {
-        let solution = solve(&state, &directions, 1_000);
+        let solution = match memo.get(&state) {
+            Some(solution) if solution.num_rocks <= rocks_remaining => solution.clone(),
+            _ => {
+                let solution = solve(&state, &directions, 1);
+                memo.insert(state.clone(), solution.clone());
+                solution
+            }
+        };
 
-        if solution.new_state == state {
-            let repeat = rocks_remaining / solution.num_rocks;
-            height += solution.extra_height * repeat;
-            rocks_remaining -= solution.num_rocks * repeat;
-            break;
-        } else {
-            height += solution.extra_height;
-            rocks_remaining -= solution.num_rocks;
-            state = solution.new_state.clone();
+        height += solution.extra_height;
+        rocks_remaining -= solution.num_rocks;
+        state = solution.new_state.clone();
+
+        if let Some(next_solution) = memo.get(&solution.new_state) {
+            let total_num_rocks = solution.num_rocks + next_solution.num_rocks;
+            if total_num_rocks <= rocks_remaining {
+                let combined_solution = Solution {
+                    new_state: next_solution.new_state.clone(),
+                    extra_height: solution.extra_height + next_solution.extra_height,
+                    num_rocks: total_num_rocks,
+                };
+                memo.insert(state.clone(), combined_solution);
+            }
         }
     }
     let sol1 = solve(&initial_state, &directions, 1000);
     let sol2 = solve(&sol1.new_state, &directions, 1000);
     let sol3 = solve(&initial_state, &directions, 2000);
+    assert_eq!(
+        memoize(&restore(&sol2.new_state.chamber)),
+        sol2.new_state.chamber
+    );
     assert_eq!(sol2.new_state, sol3.new_state);
     assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
-
+    assert_eq!(rocks_remaining, 0);
     height
 }
 
 fn memoize(chamber: &HashSet<Coord>) -> String {
     let mut buf = String::new();
     let max_height = chamber.iter().map(|(_x, y)| *y).max().unwrap_or(0);
-    let min_height = (max_height - 20).max(0) + 1;
+    let min_height = (max_height - 20).max(0);
     for y in (min_height..=max_height).rev() {
         buf.push('|');
-        for x in 0..7 {
+        for x in 1..=7 {
             if chamber.contains(&(x, y)) {
                 buf.push('#');
             } else {
@@ -213,7 +226,7 @@ fn restore(memo: &String) -> HashSet<Coord> {
     for (y, line) in memo.lines().rev().enumerate() {
         for (x, c) in line.chars().dropping_back(1).skip(1).enumerate() {
             if c == '#' {
-                res.insert((x as i64, (y + 1) as i64));
+                res.insert(((x + 1) as i64, (y + 1) as i64));
             }
         }
     }
@@ -247,5 +260,7 @@ mod tests {
         let res = part2(read_file());
         println!("{}", res);
         // assert_eq!(res, 0);
+        // 1604165057486 -- Too high
+        // 1283527810131 -- Too low
     }
 }
