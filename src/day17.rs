@@ -191,12 +191,16 @@ fn part2(directions: String) -> i64 {
     let sol1 = solve(&initial_state, &directions, 1000);
     let sol2 = solve(&sol1.new_state, &directions, 1000);
     let sol3 = solve(&initial_state, &directions, 2000);
+    let sol4 = solve(&sol3.new_state, &directions, 2000);
+    let sol5 = solve(&initial_state, &directions, 4000);
     assert_eq!(
         memoize(&restore(&sol2.new_state.chamber)),
         sol2.new_state.chamber
     );
     assert_eq!(sol2.new_state, sol3.new_state);
     assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
+    assert_eq!(sol4.new_state, sol5.new_state);
+    assert_eq!(sol3.extra_height + sol4.extra_height, sol5.extra_height);
     assert_eq!(rocks_remaining, 0);
     height
 }
