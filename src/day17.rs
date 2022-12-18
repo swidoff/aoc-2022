@@ -159,38 +159,37 @@ fn solve_n(directions: &String, n: i64) -> i64 {
     };
 
     // Sanity checks.
-    let sol1 = solve(&initial_state, &directions, 1000);
-    let sol2 = solve(&sol1.new_state, &directions, 1000);
-    let sol3 = solve(&initial_state, &directions, 2000);
-    let sol4 = solve(&sol3.new_state, &directions, 2000);
-    let sol5 = solve(&initial_state, &directions, 4000);
-    assert_eq!(
-        memoize(&restore(&sol2.new_state.chamber)),
-        sol2.new_state.chamber
-    );
-    assert_eq!(sol2.new_state, sol3.new_state);
-    assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
-    assert_eq!(sol4.new_state, sol5.new_state);
-    assert_eq!(sol3.extra_height + sol4.extra_height, sol5.extra_height);
+    // let sol1 = solve(&initial_state, &directions, 1000);
+    // let sol2 = solve(&sol1.new_state, &directions, 1000);
+    // let sol3 = solve(&initial_state, &directions, 2000);
+    // let sol4 = solve(&sol3.new_state, &directions, 2000);
+    // let sol5 = solve(&initial_state, &directions, 4000);
+    // assert_eq!(
+    //     memoize(&restore(&sol2.new_state.chamber)),
+    //     sol2.new_state.chamber
+    // );
+    // assert_eq!(sol2.new_state, sol3.new_state);
+    // assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
+    // assert_eq!(sol4.new_state, sol5.new_state);
+    // assert_eq!(sol3.extra_height + sol4.extra_height, sol5.extra_height);
+    //
+    // let sol1 = solve(&initial_state, &directions, 1);
+    // let sol2 = solve(&sol1.new_state, &directions, 1);
+    // let sol3 = solve(&initial_state, &directions, 2);
+    // assert_eq!(sol2.new_state, sol3.new_state);
+    // assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
+    //
+    // let sol1 = solve(&initial_state, &directions, 14);
+    // let sol2 = solve(&sol1.new_state, &directions, 23);
+    // let sol3 = solve(&sol2.new_state, &directions, 12);
+    // let sol4 = solve(&initial_state, &directions, 49);
+    // assert_eq!(sol3.new_state, sol4.new_state);
+    // assert_eq!(
+    //     sol1.extra_height + sol2.extra_height + sol3.extra_height,
+    //     sol4.extra_height
+    // );
+    // assert_eq!(sol1.num_rocks + sol2.num_rocks + sol3.num_rocks, 49);
 
-    let sol1 = solve(&initial_state, &directions, 1);
-    let sol2 = solve(&sol1.new_state, &directions, 1);
-    let sol3 = solve(&initial_state, &directions, 2);
-    assert_eq!(sol2.new_state, sol3.new_state);
-    assert_eq!(sol1.extra_height + sol2.extra_height, sol3.extra_height);
-
-    let sol1 = solve(&initial_state, &directions, 14);
-    let sol2 = solve(&sol1.new_state, &directions, 23);
-    let sol3 = solve(&sol2.new_state, &directions, 12);
-    let sol4 = solve(&initial_state, &directions, 49);
-    assert_eq!(sol3.new_state, sol4.new_state);
-    assert_eq!(
-        sol1.extra_height + sol2.extra_height + sol3.extra_height,
-        sol4.extra_height
-    );
-    assert_eq!(sol1.num_rocks + sol2.num_rocks + sol3.num_rocks, 49);
-
-    let mut rocks_remaining: i64 = n;
     let mut rocks_remaining: i64 = n;
     let mut height = 0;
     let mut state = initial_state.clone();
@@ -206,6 +205,7 @@ fn solve_n(directions: &String, n: i64) -> i64 {
             }
         };
 
+        // Transitively combine a chain of two solutions into a new solution.
         if let Some(next_solution) = memo.get(&solution.new_state) {
             let combined_solution = Solution {
                 new_state: next_solution.new_state.clone(),
