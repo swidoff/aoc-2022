@@ -98,7 +98,7 @@ fn solve(state: &State, directions: &String, num_rocks: i64) -> Solution {
         let mut rock = new_rock(rock_type, 3, height + 4);
         let mut turn = 0;
         loop {
-            let dir = if turn % 2 == 0 {
+            let dir = if turn == 0 {
                 let (pos, dir) = dir_iter.next().unwrap();
                 dir_pos = pos;
                 dir
@@ -188,11 +188,9 @@ fn solve_n(directions: &String, n: i64) -> i64 {
         sol1.extra_height + sol2.extra_height + sol3.extra_height,
         sol4.extra_height
     );
-    assert_eq!(
-        sol1.num_rocks + sol2.num_rocks + sol3.num_rocks,
-        sol4.num_rocks
-    );
+    assert_eq!(sol1.num_rocks + sol2.num_rocks + sol3.num_rocks, 49);
 
+    let mut rocks_remaining: i64 = n;
     let mut rocks_remaining: i64 = n;
     let mut height = 0;
     let mut state = initial_state.clone();
@@ -208,21 +206,28 @@ fn solve_n(directions: &String, n: i64) -> i64 {
             }
         };
 
+        if let Some(next_solution) = memo.get(&solution.new_state) {
+            let combined_solution = Solution {
+                new_state: next_solution.new_state.clone(),
+                extra_height: solution.extra_height + next_solution.extra_height,
+                num_rocks: solution.num_rocks + next_solution.num_rocks,
+            };
+            // let solution2 = solve(&state, &directions, combined_solution.num_rocks.clone());
+            // assert_eq!(next_solution.new_state, solution2.new_state);
+            // assert_eq!(combined_solution.extra_height, solution2.extra_height);
+            memo.insert(state.clone(), combined_solution);
+        }
+
+        // let solution = solve(&state, &directions, 1);
+        // println!("{}", n - rocks_remaining);
+        // println!("{:?}", state);
+        // println!("{:?}", solution.new_state);
         height += solution.extra_height;
         rocks_remaining -= solution.num_rocks;
         state = solution.new_state.clone();
-
-        if let Some(next_solution) = memo.get(&solution.new_state) {
-            let total_num_rocks = solution.num_rocks + next_solution.num_rocks;
-            if total_num_rocks <= rocks_remaining {
-                let combined_solution = Solution {
-                    new_state: next_solution.new_state.clone(),
-                    extra_height: solution.extra_height + next_solution.extra_height,
-                    num_rocks: total_num_rocks,
-                };
-                memo.insert(state.clone(), combined_solution);
-            }
-        }
+        // let solution2 = solve(&initial_state, &directions, n - rocks_remaining);
+        // assert_eq!(solution.new_state, solution2.new_state);
+        // assert_eq!(height, solution2.extra_height);
     }
     assert_eq!(rocks_remaining, 0);
     height
@@ -235,7 +240,7 @@ fn part2(directions: String) -> i64 {
 fn memoize(chamber: &HashSet<Coord>) -> String {
     let mut buf = String::new();
     let max_height = chamber.iter().map(|(_x, y)| *y).max().unwrap_or(0);
-    let min_height = (max_height - 20).max(1);
+    let min_height = (max_height - 50).max(1);
     for y in (min_height..=max_height).rev() {
         buf.push('|');
         for x in 1..=7 {
@@ -293,8 +298,6 @@ mod tests {
     fn test_part2() {
         let res = part2(read_file());
         println!("{}", res);
-        assert_eq!(res, 0);
-        // 1604165057486 -- Too high
-        // 1283527810131 -- Too low
+        assert_eq!(res, 1541449275365);
     }
 }
