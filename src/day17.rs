@@ -2,11 +2,6 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
-use std::iter;
-use std::iter::Cycle;
-use std::os::linux::raw::stat;
-use std::str::Chars;
-use std::str::FromStr;
 
 fn read_file() -> String {
     let mut file = File::open("input/day17.txt").unwrap();
@@ -54,22 +49,22 @@ fn part1(directions: String) -> i64 {
     solve(&initial_state, &directions, 2022).extra_height
 }
 
-fn print_chamber(chamber: &HashSet<Coord>) {
-    let height = chamber.iter().map(|(_x, y)| *y).max().unwrap();
-    for y in (0..=height).rev() {
-        print!("|");
-        for x in 0..7 {
-            if chamber.contains(&(x, y)) {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        }
-        println!("|");
-    }
-    println!("+-------+");
-    println!();
-}
+// fn print_chamber(chamber: &HashSet<Coord>) {
+//     let height = chamber.iter().map(|(_x, y)| *y).max().unwrap();
+//     for y in (0..=height).rev() {
+//         print!("|");
+//         for x in 0..7 {
+//             if chamber.contains(&(x, y)) {
+//                 print!("#");
+//             } else {
+//                 print!(".");
+//             }
+//         }
+//         println!("|");
+//     }
+//     println!("+-------+");
+//     println!();
+// }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 struct State {
