@@ -1,7 +1,6 @@
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs::File;
-use std::hash::Hash;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 
@@ -79,7 +78,7 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
     // Assume Cube 0,0,0 is air. If any of the sides of the air cube are sides of the lava cubes, add those to the
     // seen_sides set. Otherwise, the air can expand to the unblocked cubes.
     let cubes = parse_input(input);
-    let mut sides: HashSet<Side> = count_sides(&cubes)
+    let sides: HashSet<Side> = count_sides(&cubes)
         .iter()
         .filter_map(|(side, count)| {
             if *count == 1 {
@@ -139,7 +138,7 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{part1, part2, read_file};
-    use crate::day18::sides_for_cube;
+    // use crate::day18::sides_for_cube;
 
     const EXAMPLE1: &str = "1,1,1
 2,1,1";
