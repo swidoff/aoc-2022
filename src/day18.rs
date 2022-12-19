@@ -10,15 +10,17 @@ fn read_file() -> impl Iterator<Item = String> {
     BufReader::new(file).lines().map(|s| s.unwrap())
 }
 
-type Coord = (i32, i32, i32);
+type Coord = [i32; 3];
 type Side = [Coord; 4];
 
 fn parse_input(iter: impl Iterator<Item = String>) -> Vec<Coord> {
     iter.map(|s| {
-        s.split(",")
+        let (x, y, z) = s
+            .split(",")
             .map(|c| i32::from_str(c).unwrap())
             .collect_tuple()
-            .unwrap()
+            .unwrap();
+        [x, y, z]
     })
     .collect_vec()
 }
@@ -31,7 +33,7 @@ fn part1(input: impl Iterator<Item = String>) -> usize {
 
 fn count_sides(points: &Vec<Coord>) -> HashMap<Side, usize> {
     let mut sides = HashMap::new();
-    for &(x, y, z) in points {
+    for &[x, y, z] in points {
         let cube = sides_for_cube(x, y, z);
 
         for side in cube {
@@ -47,14 +49,14 @@ fn count_sides(points: &Vec<Coord>) -> HashMap<Side, usize> {
 
 fn sides_for_cube(x: i32, y: i32, z: i32) -> [Side; 6] {
     let points = [
-        (x - 1, y - 1, z - 1),
-        (x, y - 1, z - 1),
-        (x - 1, y, z - 1),
-        (x, y, z - 1),
-        (x - 1, y - 1, z),
-        (x, y - 1, z),
-        (x - 1, y, z),
-        (x, y, z),
+        [x - 1, y - 1, z - 1],
+        [x, y - 1, z - 1],
+        [x - 1, y, z - 1],
+        [x, y, z - 1],
+        [x - 1, y - 1, z],
+        [x, y - 1, z],
+        [x - 1, y, z],
+        [x, y, z],
     ];
     let mut side1 = [points[0], points[1], points[2], points[3]];
     let mut side2 = [points[4], points[5], points[6], points[7]];
@@ -74,6 +76,8 @@ fn sides_for_cube(x: i32, y: i32, z: i32) -> [Side; 6] {
 }
 
 fn part2(input: impl Iterator<Item = String>) -> usize {
+    // Assume Cube 0,0,0 is air. If any of the sides of the air cube are sides of the lava cubes, add those to the
+    // seen_sides set. Otherwise, the air can expand to the unblocked cubes.
     let cubes = parse_input(input);
     let mut sides: HashSet<Side> = count_sides(&cubes)
         .iter()
@@ -85,11 +89,23 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
             }
         })
         .collect();
+    let min = cubes
+        .iter()
+        .map(|c| *c.iter().min().unwrap())
+        .min()
+        .unwrap()
+        - 1;
+    let max = cubes
+        .iter()
+        .map(|c| *c.iter().max().unwrap())
+        .max()
+        .unwrap()
+        + 1;
 
     let mut sides_seen = HashSet::new();
     let mut cubes_seen = HashSet::new();
     let mut q = VecDeque::new();
-    q.push_back((1, 1, 1));
+    q.push_back((min, min, min));
 
     while let Some(cube @ (x, y, z)) = q.pop_front() {
         if cubes_seen.contains(&cube) {
@@ -102,17 +118,17 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
         for air_side in air_sides.iter() {
             if sides.contains(air_side) {
                 sides_seen.insert(air_side.clone());
-            } else if x > -1 && air_side.iter().all(|&(sx, sy, sz)| sx == x - 1) {
+            } else if x > min && air_side.iter().all(|&c| c[0] == x - 1) {
                 q.push_back((x - 1, y, z))
-            } else if x < 25 && air_side.iter().all(|&(sx, sy, sz)| sx == x) {
+            } else if x < max && air_side.iter().all(|&c| c[0] == x) {
                 q.push_back((x + 1, y, z))
-            } else if y > -1 && air_side.iter().all(|&(sx, sy, sz)| sy == y - 1) {
+            } else if y > min && air_side.iter().all(|&c| c[1] == y - 1) {
                 q.push_back((x, y - 1, z))
-            } else if y < 25 && air_side.iter().all(|&(sx, sy, sz)| sy == y) {
+            } else if y < max && air_side.iter().all(|&c| c[1] == y) {
                 q.push_back((x, y + 1, z))
-            } else if z > -1 && air_side.iter().all(|&(sx, sy, sz)| sz == z - 1) {
+            } else if z > min && air_side.iter().all(|&c| c[2] == z - 1) {
                 q.push_back((x, y, z - 1))
-            } else if z < 25 && air_side.iter().all(|&(sx, sy, sz)| sz == z) {
+            } else if z < max && air_side.iter().all(|&c| c[2] == z) {
                 q.push_back((x, y, z + 1))
             }
         }
