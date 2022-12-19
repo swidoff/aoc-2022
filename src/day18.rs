@@ -103,15 +103,15 @@ fn part2(input: impl Iterator<Item = String>) -> usize {
         + 1;
 
     let mut sides_seen = HashSet::new();
-    let mut cubes_seen = HashSet::new();
+    let mut air_cubes_seen = HashSet::new();
     let mut q = VecDeque::new();
     q.push_back((min, min, min));
 
-    while let Some(cube @ (x, y, z)) = q.pop_front() {
-        if cubes_seen.contains(&cube) {
+    while let Some(air_cube @ (x, y, z)) = q.pop_front() {
+        if air_cubes_seen.contains(&air_cube) {
             continue;
         } else {
-            cubes_seen.insert(cube.clone());
+            air_cubes_seen.insert(air_cube.clone());
         }
 
         let air_sides = sides_for_cube(x, y, z);
