@@ -9,7 +9,7 @@ fn read_file() -> impl Iterator<Item = String> {
 
 // const ORE: usize = 0;
 // const CLAY: usize = 1;
-// const OBSIDIAN: usize = 2;
+const OBSIDIAN: usize = 2;
 const GEODE: usize = 3;
 use itertools::Itertools;
 use std::str::FromStr;
@@ -57,6 +57,9 @@ fn evaluate_blueprint(
     max_minutes: i32,
     seen: &mut HashMap<State, i32>,
 ) -> i32 {
+    // At each point, wait some number of minutes before the next robot purchase. If you run out of time to buy
+    // another one, just collect what you can from the robots you have.
+
     if let Some(&score) = seen.get(&state) {
         return score;
     }
@@ -90,10 +93,11 @@ fn evaluate_blueprint(
                 );
                 score = score.max(new_score);
                 bought = true;
-                if i == GEODE && n == 1 {
+                if (i == GEODE || i == OBSIDIAN) && n == 1 {
+                    // If we can buy a geode or obsidian robot right now, do it!
                     break;
                 }
-                // else if i == CLAY && state.robots[i] > 0 {
+                // else if i == CLAY && state.robots[i] > 0 { <-- Works for the examples, but not my data. :(
                 //     break;
                 // }
             }
