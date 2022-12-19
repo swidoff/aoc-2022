@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -51,18 +50,9 @@ fn parse_line(line: String) -> BluePrint {
     ]
 }
 
-fn evaluate_blueprint(
-    blue_print: &BluePrint,
-    state: State,
-    max_minutes: i32,
-    seen: &mut HashMap<State, i32>,
-) -> i32 {
+fn evaluate_blueprint(blue_print: &BluePrint, state: State, max_minutes: i32) -> i32 {
     // At each point, wait some number of minutes before the next robot purchase. If you run out of time to buy
     // another one, just collect what you can from the robots you have.
-
-    if let Some(&score) = seen.get(&state) {
-        return score;
-    }
 
     if state.minutes == max_minutes {
         return state.inventory[GEODE];
@@ -89,7 +79,6 @@ fn evaluate_blueprint(
                         minutes: state.minutes + n,
                     },
                     max_minutes,
-                    seen,
                 );
                 score = score.max(new_score);
                 bought = true;
@@ -97,9 +86,6 @@ fn evaluate_blueprint(
                     // If we can buy a geode or obsidian robot right now, do it!
                     break;
                 }
-                // else if i == CLAY && state.robots[i] > 0 { <-- Works for the examples, but not my data. :(
-                //     break;
-                // }
             }
         }
     }
@@ -118,11 +104,8 @@ fn evaluate_blueprint(
                 minutes: max_minutes,
             },
             max_minutes,
-            seen,
         );
     }
-
-    seen.insert(state.clone(), score);
     score
 }
 
@@ -156,9 +139,8 @@ fn part1(input: impl Iterator<Item = String>) -> i32 {
     let mut res = 0;
 
     for (i, blueprint) in blueprints.iter().enumerate() {
-        let mut seen = HashMap::new();
         let initial_state = State::new();
-        let score = evaluate_blueprint(&blueprint, initial_state, 24, &mut seen);
+        let score = evaluate_blueprint(&blueprint, initial_state, 24);
         println!("{}: {}", i, score);
         res += (i + 1) as i32 * score;
     }
@@ -170,9 +152,8 @@ fn part2(input: impl Iterator<Item = String>) -> i32 {
     let mut res = 1;
 
     for (i, blueprint) in blueprints.iter().take(3).enumerate() {
-        let mut seen = HashMap::new();
         let initial_state = State::new();
-        let score = evaluate_blueprint(&blueprint, initial_state, 32, &mut seen);
+        let score = evaluate_blueprint(&blueprint, initial_state, 32);
         println!("{}: {}", i, score);
         res *= score;
     }
