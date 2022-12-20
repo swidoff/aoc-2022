@@ -91,6 +91,7 @@ fn evaluate_blueprint(blue_print: &BluePrint, state: State, max_minutes: i32) ->
     }
 
     if !bought {
+        // Can't buy anything. Wait out the clock with the robots we have.
         score = evaluate_blueprint(
             blue_print,
             State {
