@@ -31,15 +31,15 @@ fn parse_input(input: impl Iterator<Item = String>) -> HashMap<String, Job> {
 
 fn part1(input: impl Iterator<Item = String>) -> i64 {
     let jobs = parse_input(input);
-    solve_part1(&jobs, &"root".to_string())
+    evaluate(&jobs, &"root".to_string())
 }
 
-fn solve_part1(jobs: &HashMap<String, Job>, monkey: &String) -> i64 {
+fn evaluate(jobs: &HashMap<String, Job>, monkey: &String) -> i64 {
     match jobs.get(monkey).unwrap() {
         Job::Number(v) => *v,
         Job::Formula(op, m1, m2) => {
-            let v1 = solve_part1(jobs, m1);
-            let v2 = solve_part1(jobs, m2);
+            let v1 = evaluate(jobs, m1);
+            let v2 = evaluate(jobs, m2);
             match op.as_str() {
                 "+" => v1 + v2,
                 "-" => v1 - v2,
@@ -56,25 +56,25 @@ fn part2(input: impl Iterator<Item = String>) -> i64 {
     match jobs.get(&"root".to_string()).unwrap() {
         Job::Formula(_, m1, m2) => {
             if has_human(&jobs, m1) {
-                let value = solve_part1(&jobs, m2);
-                solve_part2(&jobs, m1, value)
+                let value = evaluate(&jobs, m2);
+                solve_for_human(&jobs, m1, value)
             } else {
-                let value = solve_part1(&jobs, m1);
-                solve_part2(&jobs, m2, value)
+                let value = evaluate(&jobs, m1);
+                solve_for_human(&jobs, m2, value)
             }
         }
         _ => panic!(),
     }
 }
 
-fn solve_part2(jobs: &HashMap<String, Job>, monkey: &String, value: i64) -> i64 {
+fn solve_for_human(jobs: &HashMap<String, Job>, monkey: &String, value: i64) -> i64 {
     if monkey == "humn" {
         value
     } else {
         match jobs.get(monkey).unwrap() {
             Job::Formula(op, m1, m2) => {
                 if has_human(&jobs, m1) {
-                    let operand = solve_part1(&jobs, m2);
+                    let operand = evaluate(&jobs, m2);
                     let new_value = match op.as_str() {
                         "+" => value - operand,
                         "-" => value + operand,
@@ -82,9 +82,9 @@ fn solve_part2(jobs: &HashMap<String, Job>, monkey: &String, value: i64) -> i64 
                         "*" => value / operand,
                         _ => panic!(),
                     };
-                    solve_part2(&jobs, m1, new_value)
+                    solve_for_human(&jobs, m1, new_value)
                 } else {
-                    let operand = solve_part1(&jobs, m1);
+                    let operand = evaluate(&jobs, m1);
                     let new_value = match op.as_str() {
                         "+" => value - operand,
                         "-" => -(value - operand),
@@ -92,7 +92,7 @@ fn solve_part2(jobs: &HashMap<String, Job>, monkey: &String, value: i64) -> i64 
                         "*" => value / operand,
                         _ => panic!(),
                     };
-                    solve_part2(&jobs, m2, new_value)
+                    solve_for_human(&jobs, m2, new_value)
                 }
             }
             _ => panic!(),
@@ -140,7 +140,7 @@ hmdt: 32";
     fn test_part1() {
         let res = part1(read_file());
         println!("{}", res);
-        // assert_eq!(res, 0);
+        assert_eq!(res, 331319379445180);
     }
 
     #[test]
@@ -152,6 +152,6 @@ hmdt: 32";
     fn test_part2() {
         let res = part2(read_file());
         println!("{}", res);
-        // assert_eq!(res, 0);
+        assert_eq!(res, 3715799488132);
     }
 }
