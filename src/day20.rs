@@ -62,7 +62,7 @@ fn mix(seq: &Vec<i64>, res: &mut Vec<Id>) {
     }
 }
 
-fn index_of(res: &Vec<usize>, target_id: Id) -> i64 {
+fn index_of(res: &Vec<Id>, target_id: Id) -> i64 {
     res.iter()
         .enumerate()
         .find_map(|(new_i, &id)| {
