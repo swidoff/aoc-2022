@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -9,7 +9,7 @@ fn read_file() -> impl Iterator<Item = String> {
 
 type Coord = (usize, usize);
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 enum Dir {
     Left,
     Right,
@@ -44,21 +44,7 @@ fn parse_input(input: impl Iterator<Item = String>) -> Map {
         }
 
         if parse_directions {
-            let mut num = 0;
-            for c in line.chars() {
-                if c.is_digit(10) {
-                    num = num * 10 + c.to_digit(10).unwrap();
-                } else {
-                    instructions.push(Instruction::Move(num));
-                    if c == 'L' {
-                        instructions.push(Instruction::TurnLeft);
-                    } else {
-                        instructions.push(Instruction::TurnRight);
-                    }
-                    num = 0;
-                }
-            }
-            instructions.push(Instruction::Move(num));
+            parse_instructions(&line, &mut instructions);
         } else {
             let mut row_limit = [usize::MAX, usize::MIN];
             for (col, c) in line.chars().enumerate() {
@@ -87,6 +73,24 @@ fn parse_input(input: impl Iterator<Item = String>) -> Map {
         col_limits,
         instructions,
     }
+}
+
+fn parse_instructions(line: &String, instructions: &mut Vec<Instruction>) {
+    let mut num = 0;
+    for c in line.chars() {
+        if c.is_digit(10) {
+            num = num * 10 + c.to_digit(10).unwrap();
+        } else {
+            instructions.push(Instruction::Move(num));
+            if c == 'L' {
+                instructions.push(Instruction::TurnLeft);
+            } else {
+                instructions.push(Instruction::TurnRight);
+            }
+            num = 0;
+        }
+    }
+    instructions.push(Instruction::Move(num));
 }
 
 fn part1(input: impl Iterator<Item = String>) -> usize {
@@ -175,13 +179,194 @@ fn part1(input: impl Iterator<Item = String>) -> usize {
     1000 * (row + 1) + 4 * (col + 1) + facing
 }
 
-fn part2(_input: impl Iterator<Item = String>) -> u32 {
-    unimplemented!()
+type Coord3d = (usize, usize, usize);
+
+struct Map3d {
+    walls: HashSet<Coord3d>,
+    instructions: Vec<Instruction>,
+}
+
+#[derive(Copy, Clone)]
+enum Entrance {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+struct Side {
+    row_offset: usize,
+    col_offset: usize,
+    neighbors: HashMap<Dir, (usize, Entrance)>,
+}
+
+fn parse_input_3d(input: impl Iterator<Item = String>, dim: usize) -> Map3d {
+    let mut walls = HashSet::new();
+    let mut instructions = Vec::new();
+    let mut parse_directions = false;
+
+    for (row, line) in input.enumerate() {
+        if line.is_empty() {
+            parse_directions = true;
+            continue;
+        }
+
+        if parse_directions {
+            parse_instructions(&line, &mut instructions);
+        } else {
+            for (col, c) in line.chars().enumerate() {
+                if c == '#' {
+                    walls.insert((row / dim, row % dim, col));
+                }
+            }
+        }
+    }
+
+    Map3d {
+        walls,
+        instructions,
+    }
+}
+
+fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> usize {
+    let map = parse_input_3d(input, dim);
+    let mut side = 0;
+    let mut row = 0;
+    let mut col = 0;
+    let mut dir = Dir::Right;
+
+    for instruction in map.instructions.iter() {
+        match instruction {
+            Instruction::TurnLeft if dir == Dir::Left => dir = Dir::Down,
+            Instruction::TurnLeft if dir == Dir::Right => dir = Dir::Up,
+            Instruction::TurnLeft if dir == Dir::Up => dir = Dir::Left,
+            Instruction::TurnLeft if dir == Dir::Down => dir = Dir::Right,
+            Instruction::TurnRight if dir == Dir::Left => dir = Dir::Up,
+            Instruction::TurnRight if dir == Dir::Right => dir = Dir::Down,
+            Instruction::TurnRight if dir == Dir::Up => dir = Dir::Right,
+            Instruction::TurnRight if dir == Dir::Down => dir = Dir::Left,
+            &Instruction::Move(n) => {
+                for _i in 0..n {
+                    if let Some((new_dir, new_side, new_row, new_col)) =
+                        move1(dir, side, row, col, dim, &sides, &map.walls)
+                    {
+                        dir = new_dir;
+                        side = new_side;
+                        row = new_row;
+                        col = new_col;
+                        println!(
+                            "{:?}, {}, {}, {}",
+                            dir,
+                            side + 1,
+                            row + 1 + sides[side].row_offset,
+                            col + 1 + sides[side].col_offset
+                        );
+                    } else {
+                        break;
+                    }
+                }
+            }
+            _ => panic!(),
+        }
+    }
+
+    let facing = match dir {
+        Dir::Right => 0,
+        Dir::Down => 1,
+        Dir::Left => 2,
+        Dir::Up => 3,
+    };
+
+    1000 * (row + sides[side].row_offset + 1) + 4 * (col + sides[side].col_offset + 1) + facing
+}
+
+fn move1(
+    dir: Dir,
+    side: usize,
+    row: usize,
+    col: usize,
+    dim: usize,
+    sides: &[Side; 6],
+    walls: &HashSet<Coord3d>,
+) -> Option<(Dir, usize, usize, usize)> {
+    let (new_dir, new_side, new_row, new_col) = match dir {
+        Dir::Right => {
+            if col == dim - 1 {
+                let &(new_side, entrance) = sides[side].neighbors.get(&Dir::Right).unwrap();
+                let (new_dir, new_row, new_col) = change_sides(Dir::Right, entrance, row, col, dim);
+                (new_dir, new_side, new_row, new_col)
+            } else {
+                (dir, side, row, col + 1)
+            }
+        }
+        Dir::Left => {
+            if col == 0 {
+                let &(new_side, entrance) = sides[side].neighbors.get(&Dir::Left).unwrap();
+                let (new_dir, new_row, new_col) = change_sides(Dir::Left, entrance, row, col, dim);
+                (new_dir, new_side, new_row, new_col)
+            } else {
+                (dir, side, row, col - 1)
+            }
+        }
+        Dir::Down => {
+            if row == dim - 1 {
+                let &(new_side, entrance) = sides[side].neighbors.get(&Dir::Down).unwrap();
+                let (new_dir, new_row, new_col) = change_sides(Dir::Down, entrance, row, col, dim);
+                (new_dir, new_side, new_row, new_col)
+            } else {
+                (dir, side, row + 1, col)
+            }
+        }
+        Dir::Up => {
+            if row == 0 {
+                let &(new_side, entrance) = sides[side].neighbors.get(&Dir::Up).unwrap();
+                let (new_dir, new_row, new_col) = change_sides(Dir::Up, entrance, row, col, dim);
+                (new_dir, new_side, new_row, new_col)
+            } else {
+                (dir, side, row - 1, col)
+            }
+        }
+    };
+
+    if walls.contains(&(new_side, new_row, new_col)) {
+        None
+    } else {
+        Some((new_dir, new_side, new_row, new_col))
+    }
+}
+
+fn change_sides(
+    dir: Dir,
+    entrance: Entrance,
+    row: usize,
+    col: usize,
+    dim: usize,
+) -> (Dir, usize, usize) {
+    match (dir, entrance) {
+        (Dir::Right, Entrance::Right) => (Dir::Left, dim - row - 1, dim - 1),
+        (Dir::Right, Entrance::Top) => (Dir::Down, 0, dim - row - 1),
+        (Dir::Right, Entrance::Bottom) => panic!(),
+        (Dir::Right, Entrance::Left) => (Dir::Right, row, 0),
+        (Dir::Left, Entrance::Right) => (Dir::Left, row, dim - 1),
+        (Dir::Left, Entrance::Top) => (Dir::Down, 0, row),
+        (Dir::Left, Entrance::Bottom) => (Dir::Up, dim - 1, dim - row - 1),
+        (Dir::Left, Entrance::Left) => panic!(),
+        (Dir::Up, Entrance::Right) => (Dir::Left, dim - col - 1, dim - 1),
+        (Dir::Up, Entrance::Top) => (Dir::Down, 0, dim - col - 1),
+        (Dir::Up, Entrance::Bottom) => (Dir::Up, dim - 1, col),
+        (Dir::Up, Entrance::Left) => (Dir::Right, col, 0),
+        (Dir::Down, Entrance::Right) => panic!(),
+        (Dir::Down, Entrance::Top) => (Dir::Down, 0, col),
+        (Dir::Down, Entrance::Bottom) => (Dir::Up, dim - 1, dim - col - 1),
+        (Dir::Down, Entrance::Left) => (Dir::Right, dim - col - 1, 0),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{part1, part2, read_file};
+    use crate::day22::{Dir, Entrance, Side};
+    use std::collections::HashMap;
 
     const EXAMPLE: &str = "        ...#
         .#..
@@ -211,15 +396,114 @@ mod tests {
         assert_eq!(res, 93226);
     }
 
-    #[test]
-    fn test_part2_example() {
-        assert_eq!(part2(EXAMPLE.lines().map(|v| v.to_string())), 0);
-    }
+    const EXAMPLE2: &str = "...#
+.#..
+#...
+....
+...#
+....
+..#.
+....
+....     
+....    
+...#    
+....    
+...#
+#...
+....
+..#.
+...#
+....
+.#..
+....    
+....    
+.#..    
+....        
+..#.    
+
+10R5L5R10L4R5L5
+";
 
     #[test]
-    fn test_part2() {
-        let res = part2(read_file());
-        println!("{}", res);
-        // assert_eq!(res, 0);
+    fn test_part2_example() {
+        let sides = [
+            Side {
+                // 1
+                row_offset: 0,
+                col_offset: 4 * 2,
+                neighbors: HashMap::from([
+                    (Dir::Up, (2 - 1, Entrance::Top)),
+                    (Dir::Right, (6 - 1, Entrance::Right)),
+                    (Dir::Down, (4 - 1, Entrance::Top)),
+                    (Dir::Left, (3 - 1, Entrance::Top)),
+                ]),
+            },
+            Side {
+                // 2
+                row_offset: 4,
+                col_offset: 0,
+                neighbors: HashMap::from([
+                    (Dir::Up, (1 - 1, Entrance::Top)),
+                    (Dir::Right, (3 - 1, Entrance::Left)),
+                    (Dir::Down, (5 - 1, Entrance::Bottom)),
+                    (Dir::Left, (6 - 1, Entrance::Bottom)),
+                ]),
+            },
+            Side {
+                // 3
+                row_offset: 4,
+                col_offset: 4,
+                neighbors: HashMap::from([
+                    (Dir::Up, (1 - 1, Entrance::Left)),
+                    (Dir::Right, (4 - 1, Entrance::Left)),
+                    (Dir::Down, (5 - 1, Entrance::Left)),
+                    (Dir::Left, (2 - 1, Entrance::Right)),
+                ]),
+            },
+            Side {
+                // 4
+                row_offset: 4,
+                col_offset: 4 * 2,
+                neighbors: HashMap::from([
+                    (Dir::Up, (1 - 1, Entrance::Bottom)),
+                    (Dir::Right, (6 - 1, Entrance::Top)),
+                    (Dir::Down, (5 - 1, Entrance::Top)),
+                    (Dir::Left, (3 - 1, Entrance::Right)),
+                ]),
+            },
+            Side {
+                // 5
+                row_offset: 4 * 2,
+                col_offset: 4 * 2,
+                neighbors: HashMap::from([
+                    (Dir::Up, (4 - 1, Entrance::Bottom)),
+                    (Dir::Right, (6 - 1, Entrance::Left)),
+                    (Dir::Down, (2 - 1, Entrance::Bottom)),
+                    (Dir::Left, (3 - 1, Entrance::Bottom)),
+                ]),
+            },
+            Side {
+                // 6
+                row_offset: 4 * 2,
+                col_offset: 4 * 3,
+                neighbors: HashMap::from([
+                    (Dir::Up, (4 - 1, Entrance::Right)),
+                    (Dir::Right, (1 - 1, Entrance::Right)),
+                    (Dir::Down, (2 - 1, Entrance::Left)),
+                    (Dir::Left, (5 - 1, Entrance::Right)),
+                ]),
+            },
+        ];
+        assert_eq!(
+            part2(EXAMPLE2.lines().map(|v| v.to_string()), 4, sides),
+            5031
+        );
     }
+
+    // #[test]
+    // fn test_part2() {
+    //     let res = part2(read_file());
+    //     println!("{}", res);
+    // assert_eq!(res, 0);
+    // }
 }
