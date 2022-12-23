@@ -35,15 +35,15 @@ fn parse_input(input: impl Iterator<Item = String>) -> Map {
     let mut row_limits = Vec::new();
     let mut col_limits = Vec::new();
     let mut instructions = Vec::new();
-    let mut parse_directions = false;
+    let mut next_section = false;
 
     for (row, line) in input.enumerate() {
         if line.is_empty() {
-            parse_directions = true;
+            next_section = true;
             continue;
         }
 
-        if parse_directions {
+        if next_section {
             parse_instructions(&line, &mut instructions);
         } else {
             let mut row_limit = [usize::MAX, usize::MIN];
@@ -199,6 +199,14 @@ fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> u
     let mut row = 0;
     let mut col = 0;
     let mut dir = Dir::Right;
+    let mut seen = HashMap::from([(
+        (
+            row + sides[side].row_offset * dim,
+            col + sides[side].col_offset * dim,
+        ),
+        0,
+    )]);
+    let mut counter = 2;
 
     for instruction in map.instructions.iter() {
         match instruction {
@@ -219,6 +227,14 @@ fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> u
                         side = new_side;
                         row = new_row;
                         col = new_col;
+                        seen.insert(
+                            (
+                                row + sides[side].row_offset * dim,
+                                col + sides[side].col_offset * dim,
+                            ),
+                            counter,
+                        );
+                        counter += 1;
                     } else {
                         break;
                     }
@@ -227,6 +243,8 @@ fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> u
             _ => panic!(),
         }
     }
+
+    print_map(&map, &seen);
 
     let facing = match dir {
         Dir::Right => 0,
@@ -240,6 +258,23 @@ fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> u
         + facing
 }
 
+fn print_map(map: &Map, seen: &HashMap<(usize, usize), i32>) {
+    for (row, &[row_min, row_max]) in map.row_limits.iter().enumerate() {
+        for col in 0..=row_max {
+            if col < row_min {
+                print!(" ");
+            } else if map.walls.contains(&(row, col)) {
+                print!("#");
+            } else if let Some(_counter) = seen.get(&(row, col)) {
+                print!("*");
+            } else {
+                print!(".");
+            }
+        }
+        println!();
+    }
+}
+
 fn move1(
     dir: Dir,
     side: usize,
@@ -249,6 +284,7 @@ fn move1(
     sides: &[Side; 6],
     walls: &HashSet<Coord>,
 ) -> Option<(Dir, usize, usize, usize)> {
+    // println!("Move1 {:?}", dir);
     let (new_dir, new_side, new_row, new_col) = match dir {
         Dir::Right => {
             if col == dim - 1 {
@@ -292,8 +328,10 @@ fn move1(
         new_row + sides[new_side].row_offset * dim,
         new_col + sides[new_side].col_offset * dim,
     )) {
+        // println!("Wall");
         None
     } else {
+        // println!("Now: {:?} {} ({}, {})", new_dir, new_side, new_row, new_col);
         Some((new_dir, new_side, new_row, new_col))
     }
 }
@@ -308,7 +346,7 @@ fn change_sides(
     match (dir, entrance) {
         (Dir::Right, Entrance::Right) => (Dir::Left, dim - row - 1, dim - 1), // Confirmed
         (Dir::Right, Entrance::Top) => (Dir::Down, 0, dim - row - 1),         // Doesn't occur
-        (Dir::Right, Entrance::Bottom) => (Dir::Up, dim - 1, col),            // Confirmed
+        (Dir::Right, Entrance::Bottom) => (Dir::Up, dim - 1, row),            // Confirmed
         (Dir::Right, Entrance::Left) => (Dir::Right, row, 0),                 // Confirmed
         (Dir::Left, Entrance::Right) => (Dir::Left, row, dim - 1),            // Confirmed
         (Dir::Left, Entrance::Top) => (Dir::Down, 0, row),                    // Confirmed
@@ -508,7 +546,7 @@ mod tests {
 
         let res = part2(read_file(), 50, sides);
         println!("{}", res);
-        assert_eq!(res, 0);
+        assert_eq!(res, 37415);
         // Too high: 79399
         // Too high: 90288
     }
