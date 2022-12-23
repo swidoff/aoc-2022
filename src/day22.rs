@@ -179,6 +179,11 @@ fn part1(input: impl Iterator<Item = String>) -> usize {
     1000 * (row + 1) + 4 * (col + 1) + facing
 }
 
+fn read_file3d() -> impl Iterator<Item = String> {
+    let file = File::open("input/day22-3d.txt").unwrap();
+    BufReader::new(file).lines().map(|s| s.unwrap())
+}
+
 type Coord3d = (usize, usize, usize);
 
 struct Map3d {
@@ -254,13 +259,6 @@ fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> u
                         side = new_side;
                         row = new_row;
                         col = new_col;
-                        println!(
-                            "{:?}, {}, {}, {}",
-                            dir,
-                            side + 1,
-                            row + 1 + sides[side].row_offset,
-                            col + 1 + sides[side].col_offset
-                        );
                     } else {
                         break;
                     }
@@ -277,7 +275,9 @@ fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> u
         Dir::Up => 3,
     };
 
-    1000 * (row + sides[side].row_offset + 1) + 4 * (col + sides[side].col_offset + 1) + facing
+    1000 * (row + sides[side].row_offset * dim + 1)
+        + 4 * (col + sides[side].col_offset * dim + 1)
+        + facing
 }
 
 fn move1(
@@ -343,29 +343,29 @@ fn change_sides(
     dim: usize,
 ) -> (Dir, usize, usize) {
     match (dir, entrance) {
-        (Dir::Right, Entrance::Right) => (Dir::Left, dim - row - 1, dim - 1),
-        (Dir::Right, Entrance::Top) => (Dir::Down, 0, dim - row - 1),
-        (Dir::Right, Entrance::Bottom) => panic!(),
-        (Dir::Right, Entrance::Left) => (Dir::Right, row, 0),
-        (Dir::Left, Entrance::Right) => (Dir::Left, row, dim - 1),
-        (Dir::Left, Entrance::Top) => (Dir::Down, 0, row),
-        (Dir::Left, Entrance::Bottom) => (Dir::Up, dim - 1, dim - row - 1),
-        (Dir::Left, Entrance::Left) => panic!(),
-        (Dir::Up, Entrance::Right) => (Dir::Left, dim - col - 1, dim - 1),
-        (Dir::Up, Entrance::Top) => (Dir::Down, 0, dim - col - 1),
-        (Dir::Up, Entrance::Bottom) => (Dir::Up, dim - 1, col),
-        (Dir::Up, Entrance::Left) => (Dir::Right, col, 0),
-        (Dir::Down, Entrance::Right) => panic!(),
-        (Dir::Down, Entrance::Top) => (Dir::Down, 0, col),
-        (Dir::Down, Entrance::Bottom) => (Dir::Up, dim - 1, dim - col - 1),
-        (Dir::Down, Entrance::Left) => (Dir::Right, dim - col - 1, 0),
+        (Dir::Right, Entrance::Right) => (Dir::Left, dim - row - 1, dim - 1), // Confirmed
+        (Dir::Right, Entrance::Top) => (Dir::Down, 0, dim - row - 1),         // Doesn't occur
+        (Dir::Right, Entrance::Bottom) => (Dir::Up, dim - 1, col),            // Confirmed
+        (Dir::Right, Entrance::Left) => (Dir::Right, row, 0),                 // Confirmed
+        (Dir::Left, Entrance::Right) => (Dir::Left, row, dim - 1),            // Confirmed
+        (Dir::Left, Entrance::Top) => (Dir::Down, 0, row),                    // Confirmed
+        (Dir::Left, Entrance::Bottom) => (Dir::Up, dim - 1, dim - row - 1),   // Doesn't occur
+        (Dir::Left, Entrance::Left) => (Dir::Right, dim - row - 1, 0),        // Confirmed
+        (Dir::Up, Entrance::Right) => (Dir::Left, dim - col - 1, dim - 1),    // Doesn't occur
+        (Dir::Up, Entrance::Top) => (Dir::Down, 0, dim - col - 1),            // Doesn't occur
+        (Dir::Up, Entrance::Bottom) => (Dir::Up, dim - 1, col),               // Confirmed
+        (Dir::Up, Entrance::Left) => (Dir::Right, col, 0),                    // Confirmed
+        (Dir::Down, Entrance::Right) => (Dir::Left, col, dim - 1),            // Confirmed
+        (Dir::Down, Entrance::Top) => (Dir::Down, 0, col),                    // Confirmed
+        (Dir::Down, Entrance::Bottom) => (Dir::Up, dim - 1, dim - col - 1),   // Doesn't occur
+        (Dir::Down, Entrance::Left) => (Dir::Right, dim - col - 1, 0),        // Doesn't occur
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{part1, part2, read_file};
-    use crate::day22::{Dir, Entrance, Side};
+    use crate::day22::{read_file3d, Dir, Entrance, Side};
     use std::collections::HashMap;
 
     const EXAMPLE: &str = "        ...#
@@ -430,7 +430,7 @@ mod tests {
             Side {
                 // 1
                 row_offset: 0,
-                col_offset: 4 * 2,
+                col_offset: 2,
                 neighbors: HashMap::from([
                     (Dir::Up, (2 - 1, Entrance::Top)),
                     (Dir::Right, (6 - 1, Entrance::Right)),
@@ -440,7 +440,7 @@ mod tests {
             },
             Side {
                 // 2
-                row_offset: 4,
+                row_offset: 1,
                 col_offset: 0,
                 neighbors: HashMap::from([
                     (Dir::Up, (1 - 1, Entrance::Top)),
@@ -451,8 +451,8 @@ mod tests {
             },
             Side {
                 // 3
-                row_offset: 4,
-                col_offset: 4,
+                row_offset: 1,
+                col_offset: 1,
                 neighbors: HashMap::from([
                     (Dir::Up, (1 - 1, Entrance::Left)),
                     (Dir::Right, (4 - 1, Entrance::Left)),
@@ -462,8 +462,8 @@ mod tests {
             },
             Side {
                 // 4
-                row_offset: 4,
-                col_offset: 4 * 2,
+                row_offset: 1,
+                col_offset: 2,
                 neighbors: HashMap::from([
                     (Dir::Up, (1 - 1, Entrance::Bottom)),
                     (Dir::Right, (6 - 1, Entrance::Top)),
@@ -473,8 +473,8 @@ mod tests {
             },
             Side {
                 // 5
-                row_offset: 4 * 2,
-                col_offset: 4 * 2,
+                row_offset: 2,
+                col_offset: 2,
                 neighbors: HashMap::from([
                     (Dir::Up, (4 - 1, Entrance::Bottom)),
                     (Dir::Right, (6 - 1, Entrance::Left)),
@@ -484,8 +484,8 @@ mod tests {
             },
             Side {
                 // 6
-                row_offset: 4 * 2,
-                col_offset: 4 * 3,
+                row_offset: 2,
+                col_offset: 3,
                 neighbors: HashMap::from([
                     (Dir::Up, (4 - 1, Entrance::Right)),
                     (Dir::Right, (1 - 1, Entrance::Right)),
@@ -500,10 +500,81 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_part2() {
-    //     let res = part2(read_file());
-    //     println!("{}", res);
-    // assert_eq!(res, 0);
-    // }
+    #[test]
+    fn test_part2() {
+        let sides = [
+            Side {
+                // 1
+                row_offset: 0,
+                col_offset: 1,
+                neighbors: HashMap::from([
+                    (Dir::Up, (6 - 1, Entrance::Left)),
+                    (Dir::Right, (2 - 1, Entrance::Left)),
+                    (Dir::Down, (3 - 1, Entrance::Top)),
+                    (Dir::Left, (4 - 1, Entrance::Left)),
+                ]),
+            },
+            Side {
+                // 2
+                row_offset: 0,
+                col_offset: 2,
+                neighbors: HashMap::from([
+                    (Dir::Up, (6 - 1, Entrance::Bottom)),
+                    (Dir::Right, (5 - 1, Entrance::Right)),
+                    (Dir::Down, (3 - 1, Entrance::Right)),
+                    (Dir::Left, (1 - 1, Entrance::Right)),
+                ]),
+            },
+            Side {
+                // 3
+                row_offset: 1,
+                col_offset: 1,
+                neighbors: HashMap::from([
+                    (Dir::Up, (1 - 1, Entrance::Bottom)),
+                    (Dir::Right, (2 - 1, Entrance::Bottom)),
+                    (Dir::Down, (5 - 1, Entrance::Top)),
+                    (Dir::Left, (4 - 1, Entrance::Top)),
+                ]),
+            },
+            Side {
+                // 4
+                row_offset: 2,
+                col_offset: 0,
+                neighbors: HashMap::from([
+                    (Dir::Up, (3 - 1, Entrance::Left)),
+                    (Dir::Right, (5 - 1, Entrance::Left)),
+                    (Dir::Down, (6 - 1, Entrance::Top)),
+                    (Dir::Left, (1 - 1, Entrance::Left)),
+                ]),
+            },
+            Side {
+                // 5
+                row_offset: 2,
+                col_offset: 1,
+                neighbors: HashMap::from([
+                    (Dir::Up, (3 - 1, Entrance::Bottom)),
+                    (Dir::Right, (2 - 1, Entrance::Right)),
+                    (Dir::Down, (6 - 1, Entrance::Right)),
+                    (Dir::Left, (4 - 1, Entrance::Right)),
+                ]),
+            },
+            Side {
+                // 6
+                row_offset: 3,
+                col_offset: 0,
+                neighbors: HashMap::from([
+                    (Dir::Up, (4 - 1, Entrance::Bottom)),
+                    (Dir::Right, (5 - 1, Entrance::Bottom)),
+                    (Dir::Down, (2 - 1, Entrance::Top)),
+                    (Dir::Left, (1 - 1, Entrance::Top)),
+                ]),
+            },
+        ];
+
+        let res = part2(read_file3d(), 50, sides);
+        println!("{}", res);
+        assert_eq!(res, 0);
+        // Too high: 79399
+        // Too high: 90288
+    }
 }
