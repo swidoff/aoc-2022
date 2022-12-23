@@ -179,18 +179,6 @@ fn part1(input: impl Iterator<Item = String>) -> usize {
     1000 * (row + 1) + 4 * (col + 1) + facing
 }
 
-fn read_file3d() -> impl Iterator<Item = String> {
-    let file = File::open("input/day22-3d.txt").unwrap();
-    BufReader::new(file).lines().map(|s| s.unwrap())
-}
-
-type Coord3d = (usize, usize, usize);
-
-struct Map3d {
-    walls: HashSet<Coord3d>,
-    instructions: Vec<Instruction>,
-}
-
 #[derive(Copy, Clone)]
 enum Entrance {
     Top,
@@ -205,36 +193,8 @@ struct Side {
     neighbors: HashMap<Dir, (usize, Entrance)>,
 }
 
-fn parse_input_3d(input: impl Iterator<Item = String>, dim: usize) -> Map3d {
-    let mut walls = HashSet::new();
-    let mut instructions = Vec::new();
-    let mut parse_directions = false;
-
-    for (row, line) in input.enumerate() {
-        if line.is_empty() {
-            parse_directions = true;
-            continue;
-        }
-
-        if parse_directions {
-            parse_instructions(&line, &mut instructions);
-        } else {
-            for (col, c) in line.chars().enumerate() {
-                if c == '#' {
-                    walls.insert((row / dim, row % dim, col));
-                }
-            }
-        }
-    }
-
-    Map3d {
-        walls,
-        instructions,
-    }
-}
-
 fn part2(input: impl Iterator<Item = String>, dim: usize, sides: [Side; 6]) -> usize {
-    let map = parse_input_3d(input, dim);
+    let map = parse_input(input);
     let mut side = 0;
     let mut row = 0;
     let mut col = 0;
@@ -287,7 +247,7 @@ fn move1(
     col: usize,
     dim: usize,
     sides: &[Side; 6],
-    walls: &HashSet<Coord3d>,
+    walls: &HashSet<Coord>,
 ) -> Option<(Dir, usize, usize, usize)> {
     let (new_dir, new_side, new_row, new_col) = match dir {
         Dir::Right => {
@@ -328,7 +288,10 @@ fn move1(
         }
     };
 
-    if walls.contains(&(new_side, new_row, new_col)) {
+    if walls.contains(&(
+        new_row + sides[new_side].row_offset * dim,
+        new_col + sides[new_side].col_offset * dim,
+    )) {
         None
     } else {
         Some((new_dir, new_side, new_row, new_col))
@@ -365,7 +328,7 @@ fn change_sides(
 #[cfg(test)]
 mod tests {
     use super::{part1, part2, read_file};
-    use crate::day22::{read_file3d, Dir, Entrance, Side};
+    use crate::day22::{Dir, Entrance, Side};
     use std::collections::HashMap;
 
     const EXAMPLE: &str = "        ...#
@@ -395,34 +358,6 @@ mod tests {
         println!("{}", res);
         assert_eq!(res, 93226);
     }
-
-    const EXAMPLE2: &str = "...#
-.#..
-#...
-....
-...#
-....
-..#.
-....
-....     
-....    
-...#    
-....    
-...#
-#...
-....
-..#.
-...#
-....
-.#..
-....    
-....    
-.#..    
-....        
-..#.    
-
-10R5L5R10L4R5L5
-";
 
     #[test]
     fn test_part2_example() {
@@ -495,7 +430,7 @@ mod tests {
             },
         ];
         assert_eq!(
-            part2(EXAMPLE2.lines().map(|v| v.to_string()), 4, sides),
+            part2(EXAMPLE.lines().map(|v| v.to_string()), 4, sides),
             5031
         );
     }
@@ -571,7 +506,7 @@ mod tests {
             },
         ];
 
-        let res = part2(read_file3d(), 50, sides);
+        let res = part2(read_file(), 50, sides);
         println!("{}", res);
         assert_eq!(res, 0);
         // Too high: 79399
