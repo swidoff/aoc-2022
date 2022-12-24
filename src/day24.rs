@@ -58,7 +58,7 @@ fn part1(
     let initial_state = parse_input(input, n_rows, n_cols);
     let dest = (n_rows - 1 as i32, n_cols - 1 as i32);
     let mut memo = HashMap::new();
-    solve_quickest_path(
+    let (_, minutes) = solve_quickest_path(
         initial_state,
         0,
         n_rows,
@@ -66,7 +66,8 @@ fn part1(
         max_minutes,
         dest,
         &mut memo,
-    )
+    );
+    minutes
 }
 
 fn solve_quickest_path(
@@ -76,23 +77,24 @@ fn solve_quickest_path(
     n_cols: i32,
     max_minutes: usize,
     dest: Coord,
-    memo: &mut HashMap<State, usize>,
-) -> usize {
-    if let Some(solution) = memo.get(&state) {
-        return *solution;
+    memo: &mut HashMap<State, (Option<State>, usize)>,
+) -> (Option<State>, usize) {
+    if let Some((final_state, solution)) = memo.get(&state) {
+        return (final_state.clone(), *solution);
     }
 
     if minutes == max_minutes {
-        return usize::MAX;
+        return (None, usize::MAX);
     }
 
     if state.coord == dest {
-        return minutes + 1;
+        return (Some(state), minutes + 1);
     }
 
     let new_blizzards = advance(&state.blizzards, n_rows, n_cols);
     let (row, col) = state.coord;
 
+    let mut best_state = None;
     let mut min_minutes = usize::MAX;
     for new_coord @ (new_row, new_col) in [
         (row - 1, col),
@@ -105,12 +107,12 @@ fn solve_quickest_path(
             || (new_row >= 0 && new_row < n_rows && new_col >= 0 && new_col < n_cols)
         {
             let i = new_row * n_cols + new_col;
-            if i < 0 || new_blizzards[i as usize] == EMPTY {
+            if i < 0 || i >= new_blizzards.len() as i32 || new_blizzards[i as usize] == EMPTY {
                 let new_state = State {
                     blizzards: new_blizzards.clone(),
                     coord: new_coord,
                 };
-                let new_minutes = solve_quickest_path(
+                let (final_state, new_minutes) = solve_quickest_path(
                     new_state,
                     minutes + 1,
                     n_rows,
@@ -119,13 +121,16 @@ fn solve_quickest_path(
                     dest,
                     memo,
                 );
-                min_minutes = min_minutes.min(new_minutes);
+                if new_minutes < min_minutes {
+                    min_minutes = new_minutes;
+                    best_state = final_state;
+                }
             }
         }
     }
 
-    memo.insert(state, min_minutes);
-    min_minutes
+    memo.insert(state, (best_state.clone(), min_minutes));
+    (best_state, min_minutes)
 }
 
 fn advance(blizzards: &Vec<u8>, n_rows: i32, n_cols: i32) -> Vec<u8> {
@@ -161,21 +166,44 @@ fn advance(blizzards: &Vec<u8>, n_rows: i32, n_cols: i32) -> Vec<u8> {
     new_blizzards
 }
 
-fn part2(input: impl Iterator<Item = String>) -> u32 {
-    // let initial_state = parse_input(input, n_rows, n_cols);
-    // let dest = (n_rows - 1 as i32, n_cols - 1 as i32);
-    // let mut memo = HashMap::new();
-    // solve_quickest_path(
-    //     initial_state,
-    //     0,
-    //     n_rows,
-    //     n_cols,
-    //     max_minutes,
-    //     dest,
-    //     &mut memo,
-    // );
+fn part2(
+    input: impl Iterator<Item = String>,
+    n_rows: i32,
+    n_cols: i32,
+    max_minutes: usize,
+) -> usize {
+    let initial_state = parse_input(input, n_rows, n_cols);
+    let dest = (n_rows - 1 as i32, n_cols - 1 as i32);
+    let mut memo = HashMap::new();
+    let (state1, minutes1) = solve_quickest_path(
+        initial_state,
+        0,
+        n_rows,
+        n_cols,
+        max_minutes,
+        dest,
+        &mut memo,
+    );
+    memo.clear();
 
-    unimplemented!()
+    let state1 = State {
+        blizzards: state1.unwrap().blizzards,
+        coord: (n_rows, n_cols - 1),
+    };
+
+    let (state2, minutes2) =
+        solve_quickest_path(state1, 0, n_rows, n_cols, max_minutes, (0, 0), &mut memo);
+    memo.clear();
+
+    let state2 = State {
+        blizzards: state2.unwrap().blizzards,
+        coord: (-1, 0),
+    };
+
+    let (_, minutes3) =
+        solve_quickest_path(state2, 0, n_rows, n_cols, max_minutes, dest, &mut memo);
+
+    minutes1 + minutes2 + minutes3
 }
 
 #[cfg(test)]
@@ -192,24 +220,24 @@ mod tests {
 
     #[test]
     fn test_part1_example() {
-        assert_eq!(part1(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 20), 18);
+        assert_eq!(part1(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 30), 18);
     }
 
     #[test]
     fn test_part1() {
-        let res = part1(read_file(), 25, 120, 500);
+        let res = part1(read_file(), 25, 120, 300);
         println!("{}", res);
         assert_eq!(res, 281);
     }
 
     #[test]
     fn test_part2_example() {
-        assert_eq!(part2(EXAMPLE.lines().map(|v| v.to_string())), 0);
+        assert_eq!(part2(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 25), 54);
     }
 
     #[test]
     fn test_part2() {
-        let res = part2(read_file());
+        let res = part2(read_file(), 25, 120, 300);
         println!("{}", res);
         // assert_eq!(res, 0);
     }
