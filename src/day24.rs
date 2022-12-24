@@ -170,7 +170,9 @@ fn part2(
     input: impl Iterator<Item = String>,
     n_rows: i32,
     n_cols: i32,
-    max_minutes: usize,
+    max_minutes1: usize,
+    max_minutes2: usize,
+    max_minutes3: usize,
 ) -> usize {
     let initial_state = parse_input(input, n_rows, n_cols);
     let dest = (n_rows - 1 as i32, n_cols - 1 as i32);
@@ -180,11 +182,12 @@ fn part2(
         0,
         n_rows,
         n_cols,
-        max_minutes,
+        max_minutes1,
         dest,
         &mut memo,
     );
     memo.clear();
+    println!("Minutes1: {}", minutes1);
 
     let state1 = State {
         blizzards: state1.unwrap().blizzards,
@@ -192,8 +195,9 @@ fn part2(
     };
 
     let (state2, minutes2) =
-        solve_quickest_path(state1, 0, n_rows, n_cols, max_minutes, (0, 0), &mut memo);
+        solve_quickest_path(state1, 0, n_rows, n_cols, max_minutes2, (0, 0), &mut memo);
     memo.clear();
+    println!("Minutes2: {}", minutes2);
 
     let state2 = State {
         blizzards: state2.unwrap().blizzards,
@@ -201,9 +205,10 @@ fn part2(
     };
 
     let (_, minutes3) =
-        solve_quickest_path(state2, 0, n_rows, n_cols, max_minutes, dest, &mut memo);
+        solve_quickest_path(state2, 0, n_rows, n_cols, max_minutes3, dest, &mut memo);
+    println!("Minutes3: {}", minutes3);
 
-    minutes1 + minutes2 + minutes3
+    minutes1 + minutes2 + minutes3 - 2
 }
 
 #[cfg(test)]
@@ -220,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_part1_example() {
-        assert_eq!(part1(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 30), 18);
+        assert_eq!(part1(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 20), 18);
     }
 
     #[test]
@@ -232,12 +237,15 @@ mod tests {
 
     #[test]
     fn test_part2_example() {
-        assert_eq!(part2(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 25), 54);
+        assert_eq!(
+            part2(EXAMPLE.lines().map(|v| v.to_string()), 4, 6, 20, 25, 20),
+            54
+        );
     }
 
     #[test]
     fn test_part2() {
-        let res = part2(read_file(), 25, 120, 300);
+        let res = part2(read_file(), 25, 120, 300, 300, 300);
         println!("{}", res);
         // assert_eq!(res, 0);
     }
