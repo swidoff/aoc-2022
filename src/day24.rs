@@ -12,9 +12,9 @@ fn read_file() -> impl Iterator<Item = String> {
 
 const EMPTY: u8 = 0;
 const LEFT: u8 = 1;
-const RIGHT: u8 = 1 << 2;
-const UP: u8 = 1 << 3;
-const DOWN: u8 = 1 << 4;
+const RIGHT: u8 = 1 << 1;
+const UP: u8 = 1 << 2;
+const DOWN: u8 = 1 << 3;
 
 type Coord = (i32, i32);
 
